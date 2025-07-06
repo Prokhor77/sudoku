@@ -1,0 +1,269 @@
+.sudoku-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.game-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.game-header h1 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.user-info {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.user-info span {
+  background-color: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: #666;
+  border: 1px solid #dee2e6;
+}
+
+.game-time {
+  font-size: 18px;
+  font-weight: bold;
+  color: #007bff;
+  background-color: #f8f9fa;
+  padding: 8px 16px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.progress-info {
+  font-size: 16px;
+  color: #28a745;
+  font-weight: 500;
+  margin-top: 10px;
+}
+
+.game-completed {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.game-completed h2 {
+  margin: 0 0 10px 0;
+  font-size: 24px;
+}
+
+.game-completed p {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.game-controls {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.game-content {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+}
+
+.sudoku-board {
+  display: inline-block;
+  border: 3px solid #333;
+  background-color: #f9f9f9;
+}
+
+.sudoku-row {
+  display: flex;
+}
+
+.sudoku-cell {
+  width: 50px;
+  height: 50px;
+  text-align: center;
+  font-size: 1.8em;
+  font-weight: bold;
+  border: 1px solid #ccc;
+  background-color: white;
+  outline: none;
+  transition: background-color 0.3s ease;
+}
+
+/* Толстые границы для разделения на 3x3 блоки */
+.sudoku-cell:nth-child(3n) {
+  border-right: 3px solid #333;
+}
+
+.sudoku-row:nth-child(3n) .sudoku-cell {
+  border-bottom: 3px solid #333;
+}
+
+/* Стили для отключенных ячеек (начальные числа) */
+.sudoku-cell:disabled {
+  background-color: #f0f0f0;
+  color: #333;
+  font-weight: bold;
+}
+
+/* Стили для активных ячеек */
+.sudoku-cell:not(:disabled):focus {
+  background-color: #e6f3ff;
+  border-color: #007bff;
+}
+
+/* Стили для правильных ячеек */
+.sudoku-cell.correct {
+  background-color: #d4edda;
+  color: #155724;
+  border-color: #c3e6cb;
+}
+
+.sudoku-cell.correct:focus {
+  background-color: #c3e6cb;
+  border-color: #28a745;
+}
+
+/* Стили для кнопок */
+.new-game-btn, .multiplayer-btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.new-game-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.new-game-btn:hover {
+  background-color: #218838;
+}
+
+.multiplayer-btn {
+  background-color: #007bff;
+  color: white;
+}
+
+.multiplayer-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Панель игроков */
+.players-panel {
+  background-color: #f8f9fa;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 280px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.players-panel h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  text-align: center;
+}
+
+.player-item {
+  background-color: white;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 12px;
+  border-left: 4px solid #007bff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.player-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.player-name {
+  font-weight: bold;
+  color: #333;
+  font-size: 16px;
+}
+
+.player-time {
+  font-size: 14px;
+  color: #666;
+  background-color: #e9ecef;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.player-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.completed-cells {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+  min-width: 40px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #28a745, #20c997);
+  transition: width 0.3s ease;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .game-content {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .players-panel {
+    min-width: 100%;
+    max-width: 450px;
+  }
+  
+  .sudoku-cell {
+    width: 40px;
+    height: 40px;
+    font-size: 1.5em;
+  }
+  
+  .user-info {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
