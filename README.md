@@ -68,14 +68,6 @@ npm start
 3. В мультиплеере все игроки видят одну доску, прогресс и имена друг друга
 4. Можно открыть игру с разных браузеров/устройств для мультиаккаунта
 
-## Деплой на GitHub
-
-```bash
-git add .
-git commit -m "Обновление интерфейса: MUI, шапка, мультиплеер"
-git push
-```
-
 ## Технологии
 
 - **Frontend:** React, MUI (Material UI), JavaScript
@@ -88,8 +80,4 @@ git push
 
 ## Скриншот
 
-![Sudoku Multiplayer UI](./public/sudoku-multiplayer-screenshot.png)
-
----
-
-**Если есть вопросы — пиши!**
+![Sudoku Multiplayer UI](./public/sudoku.png)
