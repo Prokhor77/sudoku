@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import "./Auth.css";
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Alert from '@mui/material/Alert';
 
 function Auth({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -53,64 +59,62 @@ function Auth({ onLogin }) {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h2>{isLogin ? "Вход в игру" : "Регистрация"}</h2>
-        
-        {message && (
-          <div className={`message ${message.includes("успеш") ? "success" : "error"}`}>
-            {message}
-          </div>
-        )}
+    <Box sx={{ minHeight: '100vh', bgcolor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
+      <Card sx={{ maxWidth: 400, width: '100%', borderRadius: 3, boxShadow: 6 }}>
+        <CardContent>
+          <Typography variant="h5" align="center" gutterBottom>
+            {isLogin ? "Вход в игру" : "Регистрация"}
+          </Typography>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="username">Имя пользователя:</label>
-            <input
-              type="text"
-              id="username"
+          {message && (
+            <Alert severity={message.includes("успеш") ? "success" : "error"} sx={{ mb: 2 }}>
+              {message}
+            </Alert>
+          )}
+
+          <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="Имя пользователя"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Введите имя пользователя"
               disabled={loading}
+              autoFocus
+              fullWidth
             />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Пароль:</label>
-            <input
+            <TextField
+              label="Пароль"
               type="password"
-              id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Введите пароль"
               disabled={loading}
+              fullWidth
             />
-          </div>
+            <Button type="submit" variant="contained" color={isLogin ? "primary" : "success"} disabled={loading} fullWidth size="large">
+              {loading ? "Загрузка..." : (isLogin ? "Войти" : "Зарегистрироваться")}
+            </Button>
+          </Box>
 
-          <button type="submit" className="auth-btn" disabled={loading}>
-            {loading ? "Загрузка..." : (isLogin ? "Войти" : "Зарегистрироваться")}
-          </button>
-        </form>
-
-        <div className="auth-switch">
-          <p>
-            {isLogin ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setMessage("");
-                setPassword("");
-              }}
-              disabled={loading}
-            >
-              {isLogin ? "Зарегистрироваться" : "Войти"}
-            </button>
-          </p>
-        </div>
-      </div>
-    </div>
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              {isLogin ? "Нет аккаунта?" : "Уже есть аккаунт?"}
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setMessage("");
+                  setPassword("");
+                }}
+                disabled={loading}
+                sx={{ ml: 1 }}
+              >
+                {isLogin ? "Зарегистрироваться" : "Войти"}
+              </Button>
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    </Box>
   );
 }
 

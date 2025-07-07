@@ -1,5 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
-import "./Sudoku.css";
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Paper from '@mui/material/Paper';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import LinearProgress from '@mui/material/LinearProgress';
+import Stack from '@mui/material/Stack';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import Divider from '@mui/material/Divider';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
 
 // Функция для генерации случайного судоку
 const generateSudoku = () => {
@@ -174,6 +185,9 @@ function Sudoku({ user }) {
           setGameStartTime(data.startTime || Date.now());
           setGameTime(0);
           break;
+          
+        default:
+          break;
       }
     };
     
@@ -295,101 +309,97 @@ function Sudoku({ user }) {
   };
 
   return (
-    <div className="sudoku-container">
-      <div className="game-header">
-        <h1>Судоку {isMultiplayer && "(Мультиплеер)"}</h1>
-        {user && (
-          <div className="user-info">
-            <span>Игрок: {user.username}</span>
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, maxWidth: 1200, mx: 'auto', p: 2 }}>
+      <Typography variant="h4" align="center" sx={{ mt: 2, mb: 1 }}>
+        Судоку {isMultiplayer && <span style={{ color: '#1976d2' }}>(Мультиплеер)</span>}
+      </Typography>
+      <Stack direction="row" spacing={2} alignItems="center" justifyContent="center">
+        <Button variant={isMultiplayer ? "contained" : "outlined"} color="primary" onClick={isMultiplayer ? disconnectFromServer : connectToServer}>
+          {isMultiplayer ? "Отключиться" : "Играть онлайн"}
+        </Button>
+        <Button variant="contained" color="success" onClick={generateNewGame}>
+          Новая игра
+        </Button>
+      </Stack>
+      <Box sx={{ display: 'flex', gap: 4, width: '100%', justifyContent: 'center' }}>
+        <Paper elevation={4} sx={{ p: 3, bgcolor: '#fff', borderRadius: 3 }}>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" color="text.secondary">
+              Игрок: <b>{user.username}</b>
+            </Typography>
             {user.gamesPlayed > 0 && (
-              <span>Игр сыграно: {user.gamesPlayed}</span>
+              <Typography variant="body2" color="text.secondary">Игр сыграно: {user.gamesPlayed}</Typography>
             )}
             {user.bestTime && (
-              <span>Лучшее время: {formatTime(user.bestTime)}</span>
+              <Typography variant="body2" color="text.secondary">Лучшее время: {formatTime(user.bestTime)}</Typography>
             )}
-          </div>
-        )}
-        {gameStartTime && (
-          <div className="game-time">
-            Время игры: {formatTime(gameTime)}
-          </div>
-        )}
-        {completedCells > 0 && (
-          <div className="progress-info">
-            Заполнено: {completedCells}/81 ячеек
-          </div>
-        )}
-      </div>
-      
-      {gameCompleted && (
-        <div className="game-completed">
-          <h2>🎉 Поздравляем! Игра завершена!</h2>
-          <p>Время: {formatTime(gameTime)}</p>
-        </div>
-      )}
-      
-      <div className="game-controls">
-        {!isMultiplayer ? (
-          <button className="multiplayer-btn" onClick={connectToServer}>
-            Играть онлайн
-          </button>
-        ) : (
-          <button className="multiplayer-btn" onClick={disconnectFromServer}>
-            Отключиться
-          </button>
-        )}
-        
-        <button className="new-game-btn" onClick={generateNewGame}>
-          Новая игра
-        </button>
-      </div>
-
-      <div className="game-content">
-        <div className="sudoku-board">
-          {board.map((row, i) => (
-            <div className="sudoku-row" key={i}>
-              {row.map((cell, j) => (
-                <input
-                  className={getCellClassName(i, j)}
-                  key={j}
-                  value={cell}
-                  onChange={(e) => handleChange(i, j, e.target.value)}
-                  maxLength={1}
-                  disabled={game.puzzle[i][j] !== "" || gameCompleted}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-
-        {isMultiplayer && (
-          <div className="players-panel">
-            <h3>Игроки онлайн ({uniquePlayers(players).length})</h3>
-            {uniquePlayers(players).map(player => (
-              <div key={player.id} className="player-item">
-                <div className="player-info">
-                  <span className="player-name">{player.username}</span>
-                  <span className="player-time">
-                    {formatTime(Date.now() - player.joinTime)}
-                  </span>
-                </div>
-                <div className="player-progress">
-                  <span className="completed-cells">
-                    {player.completedCells}/81
-                  </span>
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill" 
-                      style={{width: `${(player.completedCells / 81) * 100}%`}}
-                    ></div>
-                  </div>
-                </div>
-              </div>
+            {gameStartTime && (
+              <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
+                Время игры: {formatTime(gameTime)}
+              </Typography>
+            )}
+            {completedCells > 0 && (
+              <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
+                Заполнено: {completedCells}/81 ячеек
+              </Typography>
+            )}
+          </Box>
+          {gameCompleted && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              <Typography variant="h6">🎉 Поздравляем! Игра завершена!</Typography>
+              <Typography>Время: {formatTime(gameTime)}</Typography>
+            </Alert>
+          )}
+          <Box sx={{ display: 'inline-block', border: '3px solid #333', bgcolor: '#f9f9f9', mb: 2 }}>
+            {board.map((row, i) => (
+              <Box key={i} sx={{ display: 'flex' }}>
+                {row.map((cell, j) => (
+                  <input
+                    className={getCellClassName(i, j)}
+                    key={j}
+                    value={cell}
+                    onChange={(e) => handleChange(i, j, e.target.value)}
+                    maxLength={1}
+                    disabled={game.puzzle[i][j] !== "" || gameCompleted}
+                    style={{
+                      width: 50, height: 50, textAlign: 'center', fontSize: 24, fontWeight: 'bold',
+                      border: '1px solid #ccc', background: game.puzzle[i][j] !== "" ? '#f0f0f0' : '#fff',
+                      outline: 'none', transition: 'background-color 0.3s',
+                      borderRight: (j + 1) % 3 === 0 && j !== 8 ? '3px solid #333' : undefined,
+                      borderBottom: (i + 1) % 3 === 0 && i !== 8 ? '3px solid #333' : undefined,
+                      color: game.puzzle[i][j] !== "" ? '#333' : undefined,
+                      borderRadius: 0
+                    }}
+                  />
+                ))}
+              </Box>
             ))}
-          </div>
-        )}
-      </div>
-    </div>
+          </Box>
+        </Paper>
+        <Card sx={{ minWidth: 300, maxWidth: 350, bgcolor: '#f8f9fa', borderRadius: 3, boxShadow: 3 }}>
+          <CardContent>
+            <Typography variant="h6" align="center" gutterBottom>
+              Игроки онлайн ({uniquePlayers(players).length})
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <List>
+              {uniquePlayers(players).map(player => (
+                <ListItem key={player.id} sx={{ flexDirection: 'column', alignItems: 'flex-start', mb: 2, p: 0 }}>
+                  <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="subtitle1" fontWeight={600}>{player.username}</Typography>
+                    <Typography variant="caption" color="text.secondary">{formatTime(Date.now() - player.joinTime)}</Typography>
+                  </Box>
+                  <Box sx={{ width: '100%', mt: 1 }}>
+                    <LinearProgress variant="determinate" value={player.completedCells / 81 * 100} sx={{ height: 8, borderRadius: 5 }} />
+                    <Typography variant="caption" color="text.secondary">{player.completedCells}/81</Typography>
+                  </Box>
+                </ListItem>
+              ))}
+            </List>
+          </CardContent>
+        </Card>
+      </Box>
+    </Box>
   );
 }
 
