@@ -202,14 +202,6 @@
   border-top: 2px solid #222;
 }
 
-/* Правая и нижняя граница для последнего блока */
-.sudoku-board .battle-cell:nth-child(9), .sudoku-board .opponent-cell:nth-child(9) {
-  border-right: 2px solid #222;
-}
-.sudoku-row:last-child .battle-cell, .sudoku-row:last-child .opponent-cell {
-  border-bottom: 2px solid #222;
-}
-
 /* Для всех ячеек последнего ряда каждого блока */
 .sudoku-row:nth-child(3n) .battle-cell, .sudoku-row:nth-child(3n) .opponent-cell {
   border-bottom: 2px solid #222;
