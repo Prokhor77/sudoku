@@ -3,9 +3,10 @@
   flex-direction: column;
   align-items: center;
   gap: 20px;
-  max-width: 800px;
+  max-width: 100vw;
   margin: 0 auto;
   padding: 20px;
+  box-sizing: border-box;
 }
 
 .game-header {
@@ -83,10 +84,12 @@
   display: flex;
   gap: 30px;
   align-items: flex-start;
+  padding-right: 120px;
 }
 
 .sudoku-board {
-  display: inline-block;
+  display: inline-block;  
+  margin: 0 0 0 100px;
   border: 3px solid #333;
   background-color: #f9f9f9;
 }
@@ -107,14 +110,17 @@
   transition: background-color 0.3s ease;
 }
 
-/* Толстые границы для разделения на 3x3 блоки */
-.sudoku-cell:nth-child(3n) {
-  border-right: 3px solid #333;
-}
+/* Внешние границы поля 9x9 */
+.sudoku-row:nth-child(1) .sudoku-cell { border-top: 3px solid #333; }
+.sudoku-row:nth-child(9) .sudoku-cell { border-bottom: 3px solid #333 !important; }
+.sudoku-cell:nth-child(1) { border-left: 3px solid #333; }
+.sudoku-cell:nth-child(9) { border-right: 3px solid #333 !important; }
 
-.sudoku-row:nth-child(3n) .sudoku-cell {
-  border-bottom: 3px solid #333;
-}
+/* Внешние границы блоков 3x3 */
+.sudoku-row:nth-child(4) .sudoku-cell,
+.sudoku-row:nth-child(7) .sudoku-cell { border-top: 3px solid #333; }
+.sudoku-cell:nth-child(4),
+.sudoku-cell:nth-child(7) { border-left: 3px solid #333; }
 
 /* Стили для отключенных ячеек (начальные числа) */
 .sudoku-cell:disabled {
@@ -142,7 +148,7 @@
 }
 
 /* Стили для кнопок */
-.back-btn, .new-game-btn, .multiplayer-btn {
+.new-game-btn, .multiplayer-btn {
   padding: 12px 24px;
   font-size: 16px;
   font-weight: bold;
@@ -259,18 +265,18 @@
     flex-direction: column;
     align-items: center;
   }
-  
+
   .players-panel {
     min-width: 100%;
     max-width: 450px;
   }
-  
+
   .sudoku-cell {
     width: 40px;
     height: 40px;
     font-size: 1.5em;
   }
-  
+
   .user-info {
     flex-direction: column;
     gap: 10px;

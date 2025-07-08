@@ -161,7 +161,18 @@ function SudokuBattle({ user, onBackToMenu }) {
           setOpponentBoard(data.board);
           break;
           
+        case 'opponent_bombs_update':
+          console.log('Получили обновление бомбочек соперника с сервера:', data.bombs);
+          setOpponentBombs(data.bombs);
+          break;
+          
+        case 'my_bombs_update':
+          console.log('Получили обновление своих бомбочек с сервера:', data.bombs);
+          setMyBombs(data.bombs);
+          break;
+          
         case 'new_battle_game':
+          console.log('Получили новую игру от сервера, сбрасываем бомбочки');
           // Получаем новое судоку от сервера
           setBoard(data.board);
           setOpponentBoard(data.board);
@@ -218,7 +229,6 @@ function SudokuBattle({ user, onBackToMenu }) {
     const isComplete = board[row].every(cell => cell !== "");
     if (isComplete && !completedRows.has(row)) {
       setCompletedRows(prev => new Set([...prev, row]));
-      setMyBombs(prev => prev + 1);
       return true;
     }
     return false;
@@ -242,7 +252,39 @@ function SudokuBattle({ user, onBackToMenu }) {
     
     if (isComplete) {
       setCompletedSquares(prev => new Set([...prev, squareKey]));
-      setMyBombs(prev => prev + 1);
+      return true;
+    }
+    return false;
+  };
+
+  // Проверка завершения строки с переданной доской
+  const checkRowCompletionWithBoard = (row, boardToCheck) => {
+    const isComplete = boardToCheck[row].every(cell => cell !== "");
+    if (isComplete && !completedRows.has(row)) {
+      setCompletedRows(prev => new Set([...prev, row]));
+      return true;
+    }
+    return false;
+  };
+
+  // Проверка завершения квадрата 3x3 с переданной доской
+  const checkSquareCompletionWithBoard = (squareRow, squareCol, boardToCheck) => {
+    const squareKey = `${squareRow}-${squareCol}`;
+    if (completedSquares.has(squareKey)) return false;
+    
+    const isComplete = true;
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        const row = squareRow * 3 + i;
+        const col = squareCol * 3 + j;
+        if (boardToCheck[row][col] === "") {
+          return false;
+        }
+      }
+    }
+    
+    if (isComplete) {
+      setCompletedSquares(prev => new Set([...prev, squareKey]));
       return true;
     }
     return false;
@@ -261,11 +303,13 @@ function SudokuBattle({ user, onBackToMenu }) {
       );
       setBoard(newBoard);
       
-      // Проверяем завершение строки и квадрата
-      const rowCompleted = checkRowCompletion(row);
+      // Проверяем завершение строки и квадрата с новой доской
+      const rowCompleted = checkRowCompletionWithBoard(row, newBoard);
       const squareRow = Math.floor(row / 3);
       const squareCol = Math.floor(col / 3);
-      const squareCompleted = checkSquareCompletion(squareRow, squareCol);
+      const squareCompleted = checkSquareCompletionWithBoard(squareRow, squareCol, newBoard);
+      
+      console.log(`Завершение строки: ${rowCompleted}, завершение квадрата: ${squareCompleted}`);
       
       // Отправляем обновление на сервер
       if (isConnected && wsRef.current) {
@@ -276,12 +320,6 @@ function SudokuBattle({ user, onBackToMenu }) {
           value: value,
           rowCompleted: rowCompleted,
           squareCompleted: squareCompleted
-        }));
-        
-        // Отправляем полную доску для синхронизации
-        wsRef.current.send(JSON.stringify({
-          type: 'battle_board_sync',
-          board: newBoard
         }));
       }
     }
@@ -529,8 +567,6 @@ function SudokuBattle({ user, onBackToMenu }) {
       }
     }
     
-    console.log('Уменьшаем количество бомб с', myBombs, 'до', myBombs - 1);
-    setMyBombs(prev => prev - 1);
     setShowBombSelection(false);
     setBombType(null);
     setShowBombPreview(false);
