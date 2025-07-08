@@ -169,7 +169,7 @@ wss.on('connection', (ws) => {
           break;
           
         case 'use_bomb':
-          handleUseBomb(currentBattleGame, currentUser, data.bombType, data.targetRow);
+          handleUseBomb(currentBattleGame, currentUser, data.bombType, data.targetRow, data.cellsToRemove);
           break;
           
         case 'battle_board_sync':
@@ -408,6 +408,27 @@ wss.on('connection', (ws) => {
         }
       });
       
+      // Отправляем доски соперников друг другу после создания новой игры
+      const playersArray = Array.from(battleGame.players.values());
+      if (playersArray.length === 2) {
+        const player1 = playersArray[0];
+        const player2 = playersArray[1];
+        
+        if (player1.ws.readyState === WebSocket.OPEN) {
+          player1.ws.send(JSON.stringify({
+            type: 'battle_board_sync',
+            board: battleGame.boards.get(player2.id)
+          }));
+        }
+        
+        if (player2.ws.readyState === WebSocket.OPEN) {
+          player2.ws.send(JSON.stringify({
+            type: 'battle_board_sync',
+            board: battleGame.boards.get(player1.id)
+          }));
+        }
+      };
+      
       // Уведомляем первого игрока о подключении второго
       const opponent = Array.from(battleGame.players.values()).find(p => p.id !== userId);
       if (opponent && opponent.ws.readyState === WebSocket.OPEN) {
@@ -419,6 +440,22 @@ wss.on('connection', (ws) => {
             joinTime: Date.now()
           }
         }));
+        
+        // Отправляем доски соперников друг другу
+        const newPlayer = battleGame.players.get(userId);
+        if (newPlayer && newPlayer.ws.readyState === WebSocket.OPEN) {
+          // Отправляем новому игроку доску соперника
+          newPlayer.ws.send(JSON.stringify({
+            type: 'battle_board_sync',
+            board: battleGame.boards.get(opponent.id)
+          }));
+          
+          // Отправляем сопернику доску нового игрока
+          opponent.ws.send(JSON.stringify({
+            type: 'battle_board_sync',
+            board: battleGame.boards.get(userId)
+          }));
+        }
       }
     }
   }
@@ -514,27 +551,73 @@ wss.on('connection', (ws) => {
   }
 
   // Новая функция для использования бомбочек
-  function handleUseBomb(battleGameId, user, bombType, targetRow) {
+  function handleUseBomb(battleGameId, user, bombType, targetRow, cellsToRemove) {
+    console.log('Обрабатываем бомбу на сервере:', { battleGameId, user, bombType, targetRow, cellsToRemove });
+    
     const battleGame = battleGames.get(battleGameId);
-    if (!battleGame) return;
+    if (!battleGame) {
+      console.log('Игра не найдена');
+      return;
+    }
     
     const player = battleGame.players.get(user.userId);
-    if (!player || player.bombs <= 0) return;
+    if (!player || player.bombs <= 0) {
+      console.log('Игрок не найден или нет бомб');
+      return;
+    }
     
     const opponent = Array.from(battleGame.players.values()).find(p => p.id !== user.userId);
-    if (!opponent) return;
+    if (!opponent) {
+      console.log('Соперник не найден');
+      return;
+    }
     
     // Уменьшаем количество бомбочек
     player.bombs -= 1;
     
+    // Если есть информация о ячейках для удаления, применяем бомбу к доске соперника
+    if (cellsToRemove && cellsToRemove.length > 0) {
+      console.log('Применяем бомбу к доске соперника, ячейки:', cellsToRemove);
+      const opponentBoard = battleGame.boards.get(opponent.id);
+      if (opponentBoard) {
+        console.log('Доска соперника до бомбы:', opponentBoard);
+        cellsToRemove.forEach(({ row, col }) => {
+          if (opponentBoard[row] && opponentBoard[row][col] !== undefined) {
+            opponentBoard[row][col] = "";
+            console.log(`Удалили ячейку [${row}][${col}]`);
+          }
+        });
+        console.log('Доска соперника после бомбы:', opponentBoard);
+        
+        // Отправляем обновленную доску соперника обратно атакующему игроку
+        if (player.ws.readyState === WebSocket.OPEN) {
+          const syncMessage = {
+            type: 'battle_board_sync',
+            board: opponentBoard
+          };
+          console.log('Отправляем обновленную доску атакующему игроку:', syncMessage);
+          player.ws.send(JSON.stringify(syncMessage));
+        }
+      } else {
+        console.log('Доска соперника не найдена');
+      }
+    } else {
+      console.log('Нет ячеек для удаления');
+    }
+    
     // Отправляем информацию о бомбе сопернику
     if (opponent.ws.readyState === WebSocket.OPEN) {
-      opponent.ws.send(JSON.stringify({
+      const bombMessage = {
         type: 'bomb_used',
         bombType: bombType,
         targetRow: targetRow,
-        targetPlayerId: opponent.id
-      }));
+        targetPlayerId: opponent.id,
+        cellsToRemove: cellsToRemove
+      };
+      console.log('Отправляем бомбу сопернику:', bombMessage);
+      opponent.ws.send(JSON.stringify(bombMessage));
+    } else {
+      console.log('WebSocket соперника не готов');
     }
   }
   
@@ -637,7 +720,7 @@ wss.on('connection', (ws) => {
     // Обновляем доску игрока
     battleGame.boards.set(user.userId, board);
     
-    // Отправляем синхронизированную доску сопернику
+    // Отправляем доску игрока его сопернику
     const opponent = Array.from(battleGame.players.values()).find(p => p.id !== user.userId);
     if (opponent && opponent.ws.readyState === WebSocket.OPEN) {
       opponent.ws.send(JSON.stringify({

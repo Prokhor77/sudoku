@@ -148,13 +148,15 @@ function SudokuBattle({ user, onBackToMenu }) {
           break;
           
         case 'bomb_used':
+          console.log('Получили бомбу от соперника:', data);
           if (data.targetPlayerId === playerIdRef.current) {
             // Получили бомбу от соперника
-            handleBombAttack(data.bombType, data.targetRow);
+            handleBombAttack(data.bombType, data.targetRow, data.cellsToRemove);
           }
           break;
           
         case 'battle_board_sync':
+          console.log('Получили синхронизированную доску от сервера:', data.board);
           // Получаем синхронизированную доску от соперника
           setOpponentBoard(data.board);
           break;
@@ -274,6 +276,12 @@ function SudokuBattle({ user, onBackToMenu }) {
           value: value,
           rowCompleted: rowCompleted,
           squareCompleted: squareCompleted
+        }));
+        
+        // Отправляем полную доску для синхронизации
+        wsRef.current.send(JSON.stringify({
+          type: 'battle_board_sync',
+          board: newBoard
         }));
       }
     }
@@ -452,6 +460,7 @@ function SudokuBattle({ user, onBackToMenu }) {
     setHoveredCol(null);
     setTargetType(null);
     setBombPreviewType(null);
+    setShowBombPreview(false);
   };
 
   const executeBomb = (type, targetRow = null) => {
@@ -477,23 +486,22 @@ function SudokuBattle({ user, onBackToMenu }) {
         }
       }
       
+      console.log('Случайная бомба - ячейки для удаления:', cellsToRemove);
+      
       // Создаем множественный взрыв с задержкой
       createMultipleExplosions(cellsToRemove, 'opponent');
       
-      setOpponentBoard(prev => {
-        const newBoard = prev.map(row => [...row]);
-        cellsToRemove.forEach(({ row, col }) => {
-          newBoard[row][col] = "";
-        });
-        // Отправляем обновленную доску на сервер для синхронизации
-        if (isConnected && wsRef.current) {
-          wsRef.current.send(JSON.stringify({
-            type: 'battle_board_sync',
-            board: newBoard
-          }));
-        }
-        return newBoard;
-      });
+      // Отправляем информацию о бомбе на сервер с указанием удаляемых ячеек
+      if (isConnected && wsRef.current) {
+        const bombData = {
+          type: 'use_bomb',
+          bombType: type,
+          targetRow: targetRow,
+          cellsToRemove: cellsToRemove
+        };
+        console.log('Отправляем бомбу на сервер:', bombData);
+        wsRef.current.send(JSON.stringify(bombData));
+      }
     } else if (type === 'linear' && targetRow !== null) {
       // Линейная бомба - удаляем всю строку
       const cellsToRemove = [];
@@ -503,57 +511,45 @@ function SudokuBattle({ user, onBackToMenu }) {
         }
       }
       
+      console.log('Линейная бомба - ячейки для удаления:', cellsToRemove);
+      
       // Создаем множественный взрыв для всей строки
       createMultipleExplosions(cellsToRemove, 'opponent');
       
-      setOpponentBoard(prev => {
-        const newBoard = prev.map(row => [...row]);
-        cellsToRemove.forEach(({ row, col }) => {
-          newBoard[row][col] = "";
-        });
-        // Отправляем обновленную доску на сервер для синхронизации
-        if (isConnected && wsRef.current) {
-          wsRef.current.send(JSON.stringify({
-            type: 'battle_board_sync',
-            board: newBoard
-          }));
-        }
-        return newBoard;
-      });
+      // Отправляем информацию о бомбе на сервер с указанием удаляемых ячеек
+      if (isConnected && wsRef.current) {
+        const bombData = {
+          type: 'use_bomb',
+          bombType: type,
+          targetRow: targetRow,
+          cellsToRemove: cellsToRemove
+        };
+        console.log('Отправляем линейную бомбу на сервер:', bombData);
+        wsRef.current.send(JSON.stringify(bombData));
+      }
     }
     
+    console.log('Уменьшаем количество бомб с', myBombs, 'до', myBombs - 1);
     setMyBombs(prev => prev - 1);
     setShowBombSelection(false);
     setBombType(null);
     setShowBombPreview(false);
+    setBombPreviewType(null);
     setIsTargetMode(false);
     setHoveredRow(null);
     setHoveredCol(null);
     setTargetType(null);
-    
-    // Отправляем информацию о бомбе на сервер
-    if (isConnected && wsRef.current) {
-      wsRef.current.send(JSON.stringify({
-        type: 'use_bomb',
-        bombType: type,
-        targetRow: targetRow
-      }));
-    }
   };
 
-  const handleBombAttack = (type, targetRow) => {
+  const handleBombAttack = (type, targetRow, cellsToRemove) => {
+    console.log('Обрабатываем атаку бомбой:', { type, targetRow, cellsToRemove });
+    
     // Создаем эффект взрыва при получении бомбы
     createExplosion(50, 50);
     
-    if (type === 'linear') {
-      const cellsToRemove = [];
-      for (let col = 0; col < 9; col++) {
-        if (game.puzzle[targetRow][col] === "" && board[targetRow][col] !== "") {
-          cellsToRemove.push({ row: targetRow, col });
-        }
-      }
-      
-      // Создаем множественный взрыв для всей строки
+    if (cellsToRemove && cellsToRemove.length > 0) {
+      console.log('Удаляем ячейки из своей доски:', cellsToRemove);
+      // Создаем множественный взрыв для указанных ячеек
       createMultipleExplosions(cellsToRemove, 'my');
       
       setBoard(prev => {
@@ -561,43 +557,51 @@ function SudokuBattle({ user, onBackToMenu }) {
         cellsToRemove.forEach(({ row, col }) => {
           newBoard[row][col] = "";
         });
-        // Отправляем обновленную доску на сервер для синхронизации
-        if (isConnected && wsRef.current) {
-          wsRef.current.send(JSON.stringify({
-            type: 'battle_board_sync',
-            board: newBoard
-          }));
-        }
+        console.log('Обновленная доска после бомбы:', newBoard);
         return newBoard;
       });
-    } else if (type === 'random') {
-      // Случайная атака
-      const cellsToRemove = [];
-      for (let i = 0; i < 5; i++) {
-        const row = Math.floor(Math.random() * 9);
-        const col = Math.floor(Math.random() * 9);
-        if (board[row][col] !== "" && game.puzzle[row][col] === "") {
-          cellsToRemove.push({ row, col });
+    } else {
+      // Fallback для обратной совместимости
+      if (type === 'linear') {
+        const cellsToRemove = [];
+        for (let col = 0; col < 9; col++) {
+          if (game.puzzle[targetRow][col] === "" && board[targetRow][col] !== "") {
+            cellsToRemove.push({ row: targetRow, col });
+          }
         }
-      }
-      
-      // Создаем множественный взрыв с задержкой
-      createMultipleExplosions(cellsToRemove, 'my');
-      
-      setBoard(prev => {
-        const newBoard = prev.map(row => [...row]);
-        cellsToRemove.forEach(({ row, col }) => {
-          newBoard[row][col] = "";
+        
+        // Создаем множественный взрыв для всей строки
+        createMultipleExplosions(cellsToRemove, 'my');
+        
+        setBoard(prev => {
+          const newBoard = prev.map(row => [...row]);
+          cellsToRemove.forEach(({ row, col }) => {
+            newBoard[row][col] = "";
+          });
+          return newBoard;
         });
-        // Отправляем обновленную доску на сервер для синхронизации
-        if (isConnected && wsRef.current) {
-          wsRef.current.send(JSON.stringify({
-            type: 'battle_board_sync',
-            board: newBoard
-          }));
+      } else if (type === 'random') {
+        // Случайная атака
+        const cellsToRemove = [];
+        for (let i = 0; i < 5; i++) {
+          const row = Math.floor(Math.random() * 9);
+          const col = Math.floor(Math.random() * 9);
+          if (board[row][col] !== "" && game.puzzle[row][col] === "") {
+            cellsToRemove.push({ row, col });
+          }
         }
-        return newBoard;
-      });
+        
+        // Создаем множественный взрыв с задержкой
+        createMultipleExplosions(cellsToRemove, 'my');
+        
+        setBoard(prev => {
+          const newBoard = prev.map(row => [...row]);
+          cellsToRemove.forEach(({ row, col }) => {
+            newBoard[row][col] = "";
+          });
+          return newBoard;
+        });
+      }
     }
   };
 
@@ -909,7 +913,13 @@ function SudokuBattle({ user, onBackToMenu }) {
               <div>
                 <button 
                   className="bomb-btn random"
-                  onClick={() => executeBomb('random')}
+                  onClick={() => {
+                    setShowBombPreview(false);
+                    // Добавляем небольшую задержку перед запуском анимации
+                    setTimeout(() => {
+                      executeBomb('random');
+                    }, 100);
+                  }}
                   style={{ margin: '10px' }}
                 >
                   🎲 Использовать случайную бомбу
@@ -919,7 +929,10 @@ function SudokuBattle({ user, onBackToMenu }) {
             
             <button 
               className="cancel-btn"
-              onClick={() => setShowBombPreview(false)}
+              onClick={() => {
+                setShowBombPreview(false);
+                setBombPreviewType(null);
+              }}
             >
               Отмена
             </button>
