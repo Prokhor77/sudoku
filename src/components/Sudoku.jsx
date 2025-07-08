@@ -60,7 +60,7 @@ function uniquePlayers(players) {
   });
 }
 
-function Sudoku({ user }) {
+function Sudoku({ user, onBackToMenu }) {
   const [game, setGame] = useState(initialGame);
   const [board, setBoard] = useState(game.puzzle);
   const [isMultiplayer, setIsMultiplayer] = useState(false);
@@ -119,10 +119,14 @@ function Sudoku({ user }) {
           playerIdRef.current = data.playerId;
           gameIdRef.current = data.gameId;
           
-          // Используем серверное судоку только если у нас нет своего
-          if (data.board && (!game.puzzle || game.puzzle.every(row => row.every(cell => cell === "")))) {
+          // В мультиплеере всегда используем серверное судоку для синхронизации
+          if (data.board && data.puzzle) {
             setBoard(data.board);
-            setGame(prev => ({ ...prev, puzzle: data.puzzle }));
+            setGame(prev => ({ 
+              ...prev, 
+              puzzle: data.puzzle,
+              solution: data.solution || prev.solution // Используем серверное решение если есть
+            }));
           }
           
           setPlayers(data.players);
@@ -140,11 +144,19 @@ function Sudoku({ user }) {
           break;
           
         case 'cell_updated':
-          if (data.playerId !== playerIdRef.current) {
-            setBoard(prev => {
-              const newBoard = prev.map(row => [...row]);
-              newBoard[data.row][data.col] = data.value;
-              return newBoard;
+          // Обновляем доску для всех игроков
+          setBoard(prev => {
+            const newBoard = prev.map(row => [...row]);
+            newBoard[data.row][data.col] = data.value;
+            return newBoard;
+          });
+          
+          // Если это не наш ход, но ячейка правильная, обновляем наше решение
+          if (data.playerId !== playerIdRef.current && data.isCorrect) {
+            setGame(prev => {
+              const newSolution = prev.solution.map(row => [...row]);
+              newSolution[data.row][data.col] = data.solution;
+              return { ...prev, solution: newSolution };
             });
           }
           
@@ -282,6 +294,7 @@ function Sudoku({ user }) {
     if (cellValue === "" || game.puzzle[row][col] !== "") {
       return false; // Пустые ячейки и начальные числа не проверяем
     }
+    // В мультиплеере проверяем правильность по решению
     return cellValue === game.solution[row][col].toString();
   };
 
@@ -329,6 +342,10 @@ function Sudoku({ user }) {
       )}
       
       <div className="game-controls">
+        <button className="back-btn" onClick={onBackToMenu}>
+          ← Назад в меню
+        </button>
+        
         {!isMultiplayer ? (
           <button className="multiplayer-btn" onClick={connectToServer}>
             Играть онлайн

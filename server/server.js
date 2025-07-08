@@ -11,6 +11,7 @@ const USERS_FILE = path.join(__dirname, 'users.json');
 
 // Хранилище активных игр и пользователей
 const games = new Map();
+const battleGames = new Map(); // Новое хранилище для боевых игр
 const players = new Map();
 const activeUsers = new Map(); // userId -> userData
 const userConnections = new Map(); // username -> userId (для предотвращения дублирования)
@@ -144,6 +145,7 @@ wss.on('connection', (ws) => {
   
   let currentUser = null;
   let currentGame = null;
+  let currentBattleGame = null; // Новое поле для боевых игр
   
   ws.on('message', (message) => {
     try {
@@ -154,8 +156,24 @@ wss.on('connection', (ws) => {
           handleJoinGame(ws, data.username, data.userId, data.currentBoard, data.currentPuzzle);
           break;
           
+        case 'join_battle':
+          handleJoinBattle(ws, data.username, data.userId, data.currentBoard);
+          break;
+          
         case 'cell_update':
           handleCellUpdate(currentGame, currentUser, data.row, data.col, data.value);
+          break;
+          
+        case 'battle_cell_update':
+          handleBattleCellUpdate(currentBattleGame, currentUser, data.row, data.col, data.value, data.rowCompleted, data.squareCompleted);
+          break;
+          
+        case 'use_bomb':
+          handleUseBomb(currentBattleGame, currentUser, data.bombType, data.targetRow);
+          break;
+          
+        case 'battle_board_sync':
+          handleBattleBoardSync(currentBattleGame, currentUser, data.board);
           break;
           
         case 'game_completed':
@@ -164,6 +182,10 @@ wss.on('connection', (ws) => {
           
         case 'leave_game':
           handlePlayerDisconnect(currentGame, currentUser);
+          break;
+          
+        case 'leave_battle':
+          handleBattlePlayerDisconnect(currentBattleGame, currentUser);
           break;
           
         case 'new_game':
@@ -179,6 +201,9 @@ wss.on('connection', (ws) => {
     console.log('Игрок отключился:', currentUser);
     if (currentGame && currentUser) {
       handlePlayerDisconnect(currentGame, currentUser);
+    }
+    if (currentBattleGame && currentUser) {
+      handleBattlePlayerDisconnect(currentBattleGame, currentUser);
     }
   });
   
@@ -251,6 +276,7 @@ wss.on('connection', (ws) => {
       playerId: userId,
       board: game.board,
       puzzle: game.puzzle,
+      solution: game.solution, // Отправляем решение для правильной подсветки
       players: Array.from(game.players.values()).map(p => ({
         id: p.id,
         username: p.username,
@@ -269,6 +295,132 @@ wss.on('connection', (ws) => {
         completedCells: 0
       }
     });
+  }
+
+  // Новая функция для боевого режима
+  function handleJoinBattle(ws, username, userId, currentBoard) {
+    // Проверяем, не подключен ли уже этот пользователь
+    if (userConnections.has(username)) {
+      const existingUserId = userConnections.get(username);
+      const existingBattleGame = players.get(existingUserId);
+      
+      if (existingBattleGame && battleGames.has(existingBattleGame)) {
+        // Отключаем предыдущее подключение
+        const battleGame = battleGames.get(existingBattleGame);
+        if (battleGame && battleGame.players.has(existingUserId)) {
+          const player = battleGame.players.get(existingUserId);
+          if (player.ws && player.ws.readyState === WebSocket.OPEN) {
+            player.ws.close();
+          }
+        }
+      }
+    }
+    
+    currentUser = { username, userId };
+    userConnections.set(username, userId);
+    
+    // Ищем активную боевую игру или создаем новую
+    let battleGameId = null;
+    for (const [id, battleGame] of battleGames) {
+      if (battleGame.players.size < 2) { // Максимум 2 игрока в боевом режиме
+        battleGameId = id;
+        break;
+      }
+    }
+    
+    if (!battleGameId) {
+      battleGameId = generateGameId();
+      // Генерируем одно судоку для всей игры
+      const sharedSudoku = generateSudokuBoard();
+      const sharedSolution = generateSudokuSolution();
+      
+      battleGames.set(battleGameId, {
+        id: battleGameId,
+        players: new Map(),
+        startTime: Date.now(),
+        sharedBoard: sharedSudoku, // Общая доска для всех игроков
+        sharedPuzzle: sharedSudoku,
+        sharedSolution: sharedSolution,
+        boards: new Map(), // Индивидуальные доски игроков
+        puzzles: new Map(),
+        solutions: new Map()
+      });
+    }
+    
+    currentBattleGame = battleGameId;
+    const battleGame = battleGames.get(battleGameId);
+    
+    // Используем общее судоку для всех игроков
+    battleGame.boards.set(userId, battleGame.sharedBoard);
+    battleGame.puzzles.set(userId, battleGame.sharedPuzzle);
+    battleGame.solutions.set(userId, battleGame.sharedSolution);
+    
+    battleGame.players.set(userId, {
+      id: userId,
+      username: username,
+      ws: ws,
+      joinTime: Date.now(),
+      completedCells: 0,
+      bombs: 0,
+      completedRows: new Set(),
+      completedSquares: new Set()
+    });
+    
+    players.set(userId, battleGameId);
+    activeUsers.set(userId, currentUser);
+    
+    // Отправляем игроку информацию об игре
+    ws.send(JSON.stringify({
+      type: 'battle_join',
+      gameId: battleGameId,
+      playerId: userId,
+      board: battleGame.boards.get(userId),
+      puzzle: battleGame.puzzles.get(userId),
+      opponent: battleGame.players.size > 1 ? 
+        Array.from(battleGame.players.values()).find(p => p.id !== userId) : null
+    }));
+    
+    // Если это второй игрок, генерируем новую игру для обоих
+    if (battleGame.players.size === 2) {
+      // Генерируем новое общее судоку для всей игры
+      const newSharedSudoku = generateSudokuBoard();
+      const newSharedSolution = generateSudokuSolution();
+      
+      // Обновляем общее судоку
+      battleGame.sharedBoard = newSharedSudoku;
+      battleGame.sharedPuzzle = newSharedSudoku;
+      battleGame.sharedSolution = newSharedSolution;
+      
+      // Обновляем судоку для всех игроков в этой игре
+      battleGame.players.forEach(player => {
+        battleGame.boards.set(player.id, newSharedSudoku);
+        battleGame.puzzles.set(player.id, newSharedSudoku);
+        battleGame.solutions.set(player.id, newSharedSolution);
+        
+        // Отправляем новое судоку каждому игроку
+        if (player.ws.readyState === WebSocket.OPEN) {
+          player.ws.send(JSON.stringify({
+            type: 'new_battle_game',
+            board: newSharedSudoku,
+            puzzle: newSharedSudoku,
+            solution: newSharedSolution
+          }));
+        }
+      });
+      
+      // Уведомляем первого игрока о подключении второго
+      const opponent = Array.from(battleGame.players.values()).find(p => p.id !== userId);
+      if (opponent && opponent.ws.readyState === WebSocket.OPEN) {
+        opponent.ws.send(JSON.stringify({
+          type: 'opponent_joined',
+          opponent: {
+            id: userId,
+            username: username,
+            joinTime: Date.now()
+          }
+        }));
+      }
+    }
   }
   
   function handleCellUpdate(gameId, user, row, col, value) {
@@ -289,7 +441,7 @@ wss.on('connection', (ws) => {
     if (!game.board[row]) game.board[row] = [];
     game.board[row][col] = value;
     
-    // Отправляем обновление всем игрокам
+    // Отправляем обновление всем игрокам с информацией о правильности
     broadcastToGame(gameId, {
       type: 'cell_updated',
       playerId: user.userId,
@@ -298,12 +450,91 @@ wss.on('connection', (ws) => {
       col: col,
       value: value,
       isCorrect: isCorrect,
-      completedCells: player.completedCells
+      completedCells: player.completedCells,
+      solution: game.solution[row][col] // Отправляем правильный ответ для подсветки
     });
     
     // Проверяем, завершил ли игрок игру
     if (player.completedCells >= 81) {
       handleGameCompleted(user, Date.now() - game.startTime);
+    }
+  }
+
+  // Новая функция для обновления ячеек в боевом режиме
+  function handleBattleCellUpdate(battleGameId, user, row, col, value, rowCompleted, squareCompleted) {
+    const battleGame = battleGames.get(battleGameId);
+    if (!battleGame) return;
+    
+    const player = battleGame.players.get(user.userId);
+    if (!player) return;
+    
+    // Обновляем доску игрока
+    const playerBoard = battleGame.boards.get(user.userId);
+    if (!playerBoard[row]) playerBoard[row] = [];
+    playerBoard[row][col] = value;
+    
+    // Проверяем правильность ответа
+    const playerSolution = battleGame.solutions.get(user.userId);
+    const isCorrect = value === playerSolution[row][col].toString();
+    
+    if (isCorrect && value !== "") {
+      player.completedCells += 1;
+    }
+    
+    // Если завершена строка или квадрат, даем бомбочку
+    if (rowCompleted || squareCompleted) {
+      player.bombs += 1;
+    }
+    
+    // Отправляем обновление сопернику
+    const opponent = Array.from(battleGame.players.values()).find(p => p.id !== user.userId);
+    if (opponent && opponent.ws.readyState === WebSocket.OPEN) {
+      opponent.ws.send(JSON.stringify({
+        type: 'opponent_cell_update',
+        row: row,
+        col: col,
+        value: value
+      }));
+    }
+    
+    // Проверяем, завершил ли игрок игру
+    if (player.completedCells >= 81) {
+      // Игрок победил
+      if (opponent && opponent.ws.readyState === WebSocket.OPEN) {
+        opponent.ws.send(JSON.stringify({
+          type: 'game_over',
+          winner: user.username
+        }));
+      }
+      ws.send(JSON.stringify({
+        type: 'game_over',
+        winner: user.username
+      }));
+    }
+  }
+
+  // Новая функция для использования бомбочек
+  function handleUseBomb(battleGameId, user, bombType, targetRow) {
+    const battleGame = battleGames.get(battleGameId);
+    if (!battleGame) return;
+    
+    const player = battleGame.players.get(user.userId);
+    if (!player || player.bombs <= 0) return;
+    
+    const opponent = Array.from(battleGame.players.values()).find(p => p.id !== user.userId);
+    if (!opponent) return;
+    
+    // Уменьшаем количество бомбочек
+    player.bombs -= 1;
+    
+    // Отправляем информацию о бомбе сопернику
+    if (opponent.ws.readyState === WebSocket.OPEN) {
+      opponent.ws.send(JSON.stringify({
+        type: 'bomb_used',
+        bombType: bombType,
+        targetRow: targetRow,
+        targetPlayerId: opponent.id
+      }));
     }
   }
   
@@ -367,6 +598,54 @@ wss.on('connection', (ws) => {
       games.delete(gameId);
     }
   }
+
+  // Новая функция для отключения игрока из боевой игры
+  function handleBattlePlayerDisconnect(battleGameId, user) {
+    if (!battleGameId || !user) return;
+    
+    const battleGame = battleGames.get(battleGameId);
+    if (!battleGame) return;
+    
+    battleGame.players.delete(user.userId);
+    players.delete(user.userId);
+    activeUsers.delete(user.userId);
+    userConnections.delete(user.username);
+    
+    // Уведомляем соперника
+    const opponent = Array.from(battleGame.players.values()).find(p => p.id !== user.userId);
+    if (opponent && opponent.ws.readyState === WebSocket.OPEN) {
+      opponent.ws.send(JSON.stringify({
+        type: 'opponent_left',
+        playerId: user.userId,
+        username: user.username
+      }));
+    }
+    
+    // Если игра пустая, удаляем её
+    if (battleGame.players.size === 0) {
+      battleGames.delete(battleGameId);
+    }
+  }
+
+  function handleBattleBoardSync(battleGameId, user, board) {
+    const battleGame = battleGames.get(battleGameId);
+    if (!battleGame) return;
+    
+    const player = battleGame.players.get(user.userId);
+    if (!player) return;
+    
+    // Обновляем доску игрока
+    battleGame.boards.set(user.userId, board);
+    
+    // Отправляем синхронизированную доску сопернику
+    const opponent = Array.from(battleGame.players.values()).find(p => p.id !== user.userId);
+    if (opponent && opponent.ws.readyState === WebSocket.OPEN) {
+      opponent.ws.send(JSON.stringify({
+        type: 'battle_board_sync',
+        board: board
+      }));
+    }
+  }
 });
 
 function broadcastToGame(gameId, message) {
@@ -389,7 +668,7 @@ function generateSudokuBoard() {
   const solution = generateSudokuSolution();
   const board = solution.map(row => 
     row.map(cell => 
-      Math.random() < 0.6 ? "" : cell // 60% ячеек оставляем пустыми
+      Math.random() < 0.7 ? "" : cell // 70% ячеек оставляем пустыми для боевого режима
     )
   );
   return board;
@@ -415,4 +694,5 @@ server.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
   console.log(`HTTP API: http://localhost:${PORT}`);
   console.log(`WebSocket: ws://localhost:${PORT}`);
+  console.log(`Поддерживаемые режимы: Классическая судоку и Судоку + Морской бой`);
 }); 

@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import Auth from "./components/Auth";
 import Sudoku from "./components/Sudoku";
+import SudokuBattle from "./components/SudokuBattle";
+import GameSelector from "./components/GameSelector";
 import "./App.css";
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [gameMode, setGameMode] = useState(null); // null, 'classic', 'battle'
 
   useEffect(() => {
     // Проверяем, есть ли сохраненный пользователь
@@ -26,7 +29,16 @@ function App() {
 
   const handleLogout = () => {
     setUser(null);
+    setGameMode(null);
     localStorage.removeItem("user");
+  };
+
+  const handleGameSelect = (mode) => {
+    setGameMode(mode);
+  };
+
+  const handleBackToMenu = () => {
+    setGameMode(null);
   };
 
   if (loading) {
@@ -52,7 +64,14 @@ function App() {
           </button>
         </div>
       </div>
-      <Sudoku user={user} />
+      
+      {gameMode === null ? (
+        <GameSelector onGameSelect={handleGameSelect} />
+      ) : gameMode === 'classic' ? (
+        <Sudoku user={user} onBackToMenu={handleBackToMenu} />
+      ) : (
+        <SudokuBattle user={user} onBackToMenu={handleBackToMenu} />
+      )}
     </div>
   );
 }
