@@ -1,0 +1,13 @@
+{
+  "results": [],
+  "statistics": {
+    "totalGames": 0,
+    "averageGameTime": 0,
+    "fastestGame": null,
+    "mostActivePlayer": null,
+    "gamesByMode": {
+      "classic": 0,
+      "battle": 0
+    }
+  }
+} 

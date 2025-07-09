@@ -1,7 +1,7 @@
 import React from "react";
 import "./GameSelector.css";
 
-function GameSelector({ onGameSelect }) {
+function GameSelector({ onGameSelect, onAdminPanel, isAdmin }) {
   return (
     <div className="game-selector">
       <div className="selector-container">
@@ -31,6 +31,15 @@ function GameSelector({ onGameSelect }) {
             </ul>
           </div>
         </div>
+        
+        {isAdmin && onAdminPanel && (
+          <div className="admin-section">
+            <button className="admin-btn" onClick={onAdminPanel}>
+              <span className="admin-icon">⚙️</span>
+              Административная панель
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

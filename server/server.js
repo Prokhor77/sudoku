@@ -8,6 +8,7 @@ const wss = new WebSocket.Server({ server });
 
 // Путь к файлу с пользователями
 const USERS_FILE = path.join(__dirname, 'users.json');
+const GAME_RESULTS_FILE = path.join(__dirname, 'gameResults.json');
 
 // Хранилище активных игр и пользователей
 const games = new Map();
@@ -36,6 +37,105 @@ function saveUsers(users) {
   } catch (error) {
     console.error('Ошибка сохранения пользователей:', error);
   }
+}
+
+// Загружаем результаты игр из файла
+function loadGameResults() {
+  try {
+    if (fs.existsSync(GAME_RESULTS_FILE)) {
+      const data = fs.readFileSync(GAME_RESULTS_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки результатов игр:', error);
+  }
+  return { results: [], statistics: { totalGames: 0, averageGameTime: 0, fastestGame: null, mostActivePlayer: null, gamesByMode: { classic: 0, battle: 0 } } };
+}
+
+// Сохраняем результаты игр в файл
+function saveGameResults(results) {
+  try {
+    fs.writeFileSync(GAME_RESULTS_FILE, JSON.stringify(results, null, 2));
+  } catch (error) {
+    console.error('Ошибка сохранения результатов игр:', error);
+  }
+}
+
+// Сохраняем результат игры
+function saveGameResult(result) {
+  const gameResults = loadGameResults();
+  
+  // Добавляем результат
+  gameResults.results.push(result);
+  
+  // Обновляем статистику
+  gameResults.statistics.totalGames += 1;
+  gameResults.statistics.gamesByMode[result.gameMode] += 1;
+  
+  // Обновляем среднее время
+  const totalTime = gameResults.results.reduce((sum, r) => sum + r.gameTime, 0);
+  gameResults.statistics.averageGameTime = Math.round(totalTime / gameResults.results.length);
+  
+  // Обновляем самое быстрое время
+  if (!gameResults.statistics.fastestGame || result.gameTime < gameResults.statistics.fastestGame.gameTime) {
+    gameResults.statistics.fastestGame = {
+      username: result.username,
+      gameTime: result.gameTime,
+      date: result.date
+    };
+  }
+  
+  // Обновляем самого активного игрока
+  const playerStats = {};
+  gameResults.results.forEach(r => {
+    playerStats[r.username] = (playerStats[r.username] || 0) + 1;
+  });
+  
+  const mostActive = Object.entries(playerStats).reduce((max, [player, games]) => 
+    games > max.games ? { player, games } : max, { player: null, games: 0 }
+  );
+  
+  if (mostActive.player) {
+    gameResults.statistics.mostActivePlayer = {
+      username: mostActive.player,
+      gamesPlayed: mostActive.games
+    };
+  }
+  
+  saveGameResults(gameResults);
+}
+
+// Получаем топ игроков
+function getTopPlayers(results, limit = 10) {
+  const playerStats = {};
+  
+  results.forEach(result => {
+    if (!playerStats[result.username]) {
+      playerStats[result.username] = {
+        username: result.username,
+        gamesPlayed: 0,
+        totalTime: 0,
+        bestTime: Infinity,
+        averageTime: 0
+      };
+    }
+    
+    playerStats[result.username].gamesPlayed += 1;
+    playerStats[result.username].totalTime += result.gameTime;
+    if (result.gameTime < playerStats[result.username].bestTime) {
+      playerStats[result.username].bestTime = result.gameTime;
+    }
+  });
+  
+  // Вычисляем среднее время
+  Object.values(playerStats).forEach(player => {
+    player.averageTime = Math.round(player.totalTime / player.gamesPlayed);
+  });
+  
+  // Сортируем по количеству игр и возвращаем топ
+  return Object.values(playerStats)
+    .sort((a, b) => b.gamesPlayed - a.gamesPlayed)
+    .slice(0, limit);
 }
 
 // Регистрация пользователя
@@ -125,6 +225,84 @@ server.on('request', (req, res) => {
           const result = loginUser(data.username, data.password);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(result));
+        } else if (req.url === '/api/admin/stats') {
+          // API для получения статистики (для админ панели)
+          const gameResults = loadGameResults();
+          const users = loadUsers();
+          
+          const adminStats = {
+            gameStatistics: gameResults.statistics,
+            userStatistics: {
+              totalUsers: Object.keys(users).length,
+              activeUsers: activeUsers.size,
+              onlineUsers: userConnections.size
+            },
+            recentGames: gameResults.results.slice(-10).reverse(), // Последние 10 игр
+            topPlayers: getTopPlayers(gameResults.results, 10)
+          };
+          
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(adminStats));
+        } else if (req.url === '/api/admin/games') {
+          // API для получения всех игр с фильтрацией
+          const gameResults = loadGameResults();
+          const { page = 1, limit = 20, username, gameMode, dateFrom, dateTo } = data;
+          
+          let filteredResults = gameResults.results;
+          
+          if (username) {
+            filteredResults = filteredResults.filter(r => r.username.toLowerCase().includes(username.toLowerCase()));
+          }
+          
+          if (gameMode) {
+            filteredResults = filteredResults.filter(r => r.gameMode === gameMode);
+          }
+          
+          if (dateFrom) {
+            filteredResults = filteredResults.filter(r => new Date(r.date) >= new Date(dateFrom));
+          }
+          
+          if (dateTo) {
+            filteredResults = filteredResults.filter(r => new Date(r.date) <= new Date(dateTo));
+          }
+          
+          const startIndex = (page - 1) * limit;
+          const endIndex = startIndex + parseInt(limit);
+          const paginatedResults = filteredResults.slice(startIndex, endIndex);
+          
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            results: paginatedResults,
+            total: filteredResults.length,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalPages: Math.ceil(filteredResults.length / limit)
+          }));
+        } else if (req.url === '/api/admin/users') {
+          // API для получения информации о пользователях
+          const users = loadUsers();
+          const gameResults = loadGameResults();
+          
+          const usersWithStats = Object.entries(users).map(([username, userData]) => {
+            const userGames = gameResults.results.filter(r => r.username === username);
+            const totalGames = userGames.length;
+            const averageTime = totalGames > 0 ? Math.round(userGames.reduce((sum, g) => sum + g.gameTime, 0) / totalGames) : 0;
+            const bestTime = userGames.length > 0 ? Math.min(...userGames.map(g => g.gameTime)) : null;
+            
+            return {
+              username,
+              createdAt: userData.createdAt,
+              gamesPlayed: userData.gamesPlayed,
+              bestTime: userData.bestTime,
+              totalGames,
+              averageTime,
+              bestTimeFromResults: bestTime,
+              lastGame: userGames.length > 0 ? userGames[userGames.length - 1].date : null
+            };
+          });
+          
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(usersWithStats));
         } else {
           res.writeHead(404);
           res.end('Not Found');
@@ -177,7 +355,14 @@ wss.on('connection', (ws) => {
           break;
           
         case 'game_completed':
-          handleGameCompleted(currentUser, data.gameTime);
+          handleGameCompleted(currentUser, data.gameTime, data.gameMode || 'classic', {
+            difficulty: data.difficulty,
+            hintsUsed: data.hintsUsed,
+            mistakes: data.mistakes,
+            multiplayer: data.multiplayer,
+            playersInGame: data.playersInGame,
+            gameId: currentGame
+          });
           break;
           
         case 'leave_game':
@@ -190,6 +375,9 @@ wss.on('connection', (ws) => {
           
         case 'new_game':
           handleNewGame(currentGame, data.board, data.puzzle);
+          break;
+        case 'battle_victory':
+          handleBattleVictory(currentBattleGame, currentUser, data.gameTime, data);
           break;
       }
     } catch (error) {
@@ -400,8 +588,7 @@ wss.on('connection', (ws) => {
         // Сбрасываем прогресс игрока
         player.completedCells = 0;
         player.bombs = 0;
-        player.completedRows = new Set();
-        player.completedSquares = new Set();
+        // НЕ сбрасываем completedRows и completedSquares, чтобы можно было получать бомбочки за повторное завершение
         
         // Отправляем новое судоку каждому игроку
         if (player.ws.readyState === WebSocket.OPEN) {
@@ -563,9 +750,9 @@ wss.on('connection', (ws) => {
       player.completedCells += 1;
     }
     
-    // Если завершена строка или квадрат, даем бомбочку
-    if (rowCompleted || squareCompleted) {
-      console.log(`Игрок ${user.username} получил бомбочку за завершение ${rowCompleted ? 'строки' : 'квадрата'}. Было: ${player.bombs}, стало: ${player.bombs + 1}`);
+    // Если завершена строка или квадрат И значение правильное, даем бомбочку
+    if ((rowCompleted || squareCompleted) && isCorrect && value !== "") {
+      console.log(`Игрок ${user.username} получил бомбочку за правильное завершение ${rowCompleted ? 'строки' : 'квадрата'}. Было: ${player.bombs}, стало: ${player.bombs + 1}`);
       player.bombs += 1;
       
       // Отправляем обновленное количество бомбочек игроку
@@ -586,8 +773,9 @@ wss.on('connection', (ws) => {
         type: 'opponent_cell_update',
         row: row,
         col: col,
-        value: value
+        value: value,
       }));
+      
       
       // Отправляем обновленное количество бомбочек сопернику
       opponent.ws.send(JSON.stringify({
@@ -598,16 +786,32 @@ wss.on('connection', (ws) => {
     
     // Проверяем, завершил ли игрок игру
     if (player.completedCells >= 81) {
-      // Игрок победил
+      // Игрок победил - сохраняем результат
+      const gameTime = Date.now() - battleGame.startTime;
+      handleGameCompleted(user, gameTime, 'battle', {
+        difficulty: 'medium',
+        hintsUsed: 0,
+        mistakes: 0,
+        multiplayer: true,
+        playersInGame: battleGame.players.size,
+        gameId: battleGameId,
+        winner: user.username,
+        opponent: opponent ? opponent.username : null,
+        bombsUsed: player.bombs
+      });
+      
+      // Отправляем сообщение о завершении игры
       if (opponent && opponent.ws.readyState === WebSocket.OPEN) {
         opponent.ws.send(JSON.stringify({
           type: 'game_over',
-          winner: user.username
+          winner: user.username,
+          gameTime: gameTime
         }));
       }
       ws.send(JSON.stringify({
         type: 'game_over',
-        winner: user.username
+        winner: user.username,
+        gameTime: gameTime
       }));
     }
   }
@@ -727,15 +931,35 @@ wss.on('connection', (ws) => {
     });
   }
   
-  function handleGameCompleted(user, gameTime) {
+  function handleGameCompleted(user, gameTime, gameMode = 'classic', additionalData = {}) {
     if (user && user.username) {
       updateUserStats(user.username, gameTime);
+      
+      // Сохраняем расширенный результат игры
+      const gameResult = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        username: user.username,
+        gameTime: gameTime,
+        gameMode: gameMode,
+        date: new Date().toISOString(),
+        completedCells: 81,
+        difficulty: additionalData.difficulty || 'medium',
+        hintsUsed: additionalData.hintsUsed || 0,
+        mistakes: additionalData.mistakes || 0,
+        multiplayer: additionalData.multiplayer || false,
+        playersInGame: additionalData.playersInGame || 1,
+        gameId: additionalData.gameId || null,
+        ...additionalData
+      };
+      
+      saveGameResult(gameResult);
       
       broadcastToGame(currentGame, {
         type: 'player_completed',
         playerId: user.userId,
         username: user.username,
-        gameTime: gameTime
+        gameTime: gameTime,
+        gameResult: gameResult
       });
     }
   }
@@ -852,6 +1076,71 @@ function generateSudokuSolution() {
     [2, 8, 7, 4, 1, 9, 6, 3, 5],
     [3, 4, 5, 2, 8, 6, 1, 7, 9],
   ];
+}
+
+function handleBattleVictory(battleGameId, winnerUser, gameTime, data) {
+  const battleGame = battleGames.get(battleGameId);
+  if (!battleGame) return;
+
+  // Если уже есть победитель, не засчитываем вторую победу
+  if (battleGame._winnerUsername) {
+    // Этот игрок проиграл
+    const loser = winnerUser;
+    const winner = Array.from(battleGame.players.values()).find(p => p.username === battleGame._winnerUsername);
+    handleGameCompleted(loser, gameTime, 'battle', {
+      ...data,
+      winner: winner.username,
+      opponent: winner.username,
+      result: 'lose'
+    });
+    if (loser.ws.readyState === WebSocket.OPEN) {
+      loser.ws.send(JSON.stringify({
+        type: 'game_over',
+        winner: winner.username,
+        gameTime: gameTime
+      }));
+    }
+    return;
+  }
+
+  // Первый победитель
+  battleGame._winnerUsername = winnerUser.username;
+  const winner = winnerUser;
+  const loser = Array.from(battleGame.players.values()).find(p => p.id !== winnerUser.userId);
+
+  // Сохраняем результат для победителя
+  handleGameCompleted(winner, gameTime, 'battle', {
+    ...data,
+    winner: winner.username,
+    opponent: loser ? loser.username : null,
+    result: 'win'
+  });
+
+  // Сохраняем результат для проигравшего
+  if (loser) {
+    handleGameCompleted(loser, gameTime, 'battle', {
+      ...data,
+      winner: winner.username,
+      opponent: winner.username,
+      result: 'lose'
+    });
+  }
+
+  // Оповещаем обоих игроков
+  if (winner.ws.readyState === WebSocket.OPEN) {
+    winner.ws.send(JSON.stringify({
+      type: 'game_over',
+      winner: winner.username,
+      gameTime: gameTime
+    }));
+  }
+  if (loser && loser.ws.readyState === WebSocket.OPEN) {
+    loser.ws.send(JSON.stringify({
+      type: 'game_over',
+      winner: winner.username,
+      gameTime: gameTime
+    }));
+  }
 }
 
 const PORT = process.env.PORT || 3001;

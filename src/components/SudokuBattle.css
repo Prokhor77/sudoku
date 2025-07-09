@@ -158,10 +158,9 @@
   background: #333;
   padding: 3px;
   border-radius: 8px;
-  max-width: 400px;
-  margin: 0 auto;
+  max-width: 525px;
   /* Добавим толстую рамку вокруг всей доски */
-  border: 2px solid #222;
+  border: 3px solid #222;
 }
 
 .sudoku-row {
@@ -192,19 +191,36 @@
 .sudoku-board .battle-cell, .sudoku-board .opponent-cell {
   border-top: 0.5px solid #bbb;
   border-left: 0.5px solid #bbb;
+  border-right: 0.5px solid #bbb;
+  border-bottom: 0.5px solid #bbb;
 }
 
-/* Более тонкие границы для 3x3 */
-.sudoku-board .battle-cell:nth-child(3n+1), .sudoku-board .opponent-cell:nth-child(3n+1) {
-  border-left: 2px solid #222;
-}
+/* Толстые верхние границы для 3x3 */
 .sudoku-row:nth-child(3n+1) .battle-cell, .sudoku-row:nth-child(3n+1) .opponent-cell {
   border-top: 2px solid #222;
 }
 
-/* Для всех ячеек последнего ряда каждого блока */
+/* Толстые нижние границы для 3x3 */
 .sudoku-row:nth-child(3n) .battle-cell, .sudoku-row:nth-child(3n) .opponent-cell {
   border-bottom: 2px solid #222;
+}
+
+/* Толстые левые границы только для внешних сторон квадратов 3x3 */
+.sudoku-row .battle-cell:first-child,
+.sudoku-row .battle-cell:nth-child(4),
+.sudoku-row .battle-cell:nth-child(7),
+.sudoku-row .opponent-cell:first-child,
+.sudoku-row .opponent-cell:nth-child(4),
+.sudoku-row .opponent-cell:nth-child(7) {
+  border-left: 2px solid #222;
+}
+
+/* Обычные тонкие вертикальные границы для остальных ячеек */
+.battle-cell, .opponent-cell {
+  border-right: 0.5px solid #bbb;
+  border-left: 0.5px solid #bbb;
+  border-bottom: 0.5px solid #bbb;
+  border-top: 0.5px solid #bbb;
 }
 
 .battle-cell:focus {

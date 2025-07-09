@@ -91,6 +91,17 @@ function Sudoku({ user, onBackToMenu }) {
     };
   }, [gameStartTime, gameCompleted]);
 
+  // Автоматический возврат в меню после завершения игры
+  useEffect(() => {
+    if (gameCompleted) {
+      const timer = setTimeout(() => {
+        onBackToMenu();
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [gameCompleted, onBackToMenu]);
+
   // Подключение к WebSocket серверу
   const connectToServer = () => {
     if (!user) return;
@@ -235,7 +246,13 @@ function Sudoku({ user, onBackToMenu }) {
           if (wsRef.current) {
             wsRef.current.send(JSON.stringify({
               type: 'game_completed',
-              gameTime: Date.now() - gameStartTime
+              gameTime: Date.now() - gameStartTime,
+              gameMode: 'classic',
+              difficulty: 'medium',
+              hintsUsed: 0, // Можно добавить счетчик подсказок
+              mistakes: 0, // Можно добавить счетчик ошибок
+              multiplayer: isMultiplayer,
+              playersInGame: players.length
             }));
           }
         }
@@ -338,6 +355,7 @@ function Sudoku({ user, onBackToMenu }) {
         <div className="game-completed">
           <h2>🎉 Поздравляем! Игра завершена!</h2>
           <p>Время: {formatTime(gameTime)}</p>
+          <p>Возврат в меню через 5 секунд...</p>
         </div>
       )}
       

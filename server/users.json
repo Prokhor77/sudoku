@@ -10,5 +10,11 @@
     "createdAt": "2025-07-06T16:30:19.327Z",
     "gamesPlayed": 0,
     "bestTime": null
+  },
+  "admin": {
+    "password": "admin",
+    "createdAt": "2025-07-09T09:52:11.102Z",
+    "gamesPlayed": 0,
+    "bestTime": null
   }
 }

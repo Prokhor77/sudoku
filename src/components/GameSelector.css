@@ -113,6 +113,44 @@
   left: 100%;
 }
 
+/* Административная секция */
+.admin-section {
+  margin-top: 40px;
+  text-align: center;
+  padding-top: 30px;
+  border-top: 2px solid #e9ecef;
+}
+
+.admin-btn {
+  background: linear-gradient(145deg, #6c757d, #495057);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.admin-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(145deg, #5a6268, #343a40);
+}
+
+.admin-btn:active {
+  transform: translateY(0);
+}
+
+.admin-icon {
+  font-size: 1.2rem;
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
   .game-options {
@@ -131,5 +169,14 @@
   
   .game-option {
     padding: 20px;
+  }
+  
+  .admin-section {
+    margin-top: 30px;
+  }
+  
+  .admin-btn {
+    padding: 12px 24px;
+    font-size: 1rem;
   }
 } 
