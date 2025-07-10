@@ -241,30 +241,12 @@
 }
 
 .opponent-cell.opponent-filled {
-  background: #28a745;
-  color: white;
+  background: #2bc24e;
+  color: #155724;
   font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.opponent-cell.opponent-filled::before {
-  content: "✓";
-  font-size: 1.2rem;
-  font-weight: bold;
-  animation: greenCellPulse 2s ease-in-out infinite;
-}
-
-@keyframes greenCellPulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 0.8;
-  }
 }
 
 .opponent-cell.opponent-filled:hover {
