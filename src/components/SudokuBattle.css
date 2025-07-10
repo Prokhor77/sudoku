@@ -268,29 +268,29 @@
   border-bottom: 0.5px solid #bbb;
 }
 
-/* Толстые верхние границы для 3x3
+/* Толстые верхние границы для 3x3 */
 .sudoku-row:nth-child(3n+1) .battle-cell, .sudoku-row:nth-child(3n+1) .opponent-cell {
   border-top: 2px solid #222;
-} */
+}
 
-/* Толстые нижние границы для 3x3
+/* Толстые нижние границы для 3x3 */
 .sudoku-row:nth-child(3n) .battle-cell, .sudoku-row:nth-child(3n) .opponent-cell {
   border-bottom: 2px solid #222;
-} */
+}
 
-/* Толстые левые границы для 3x3
+/* Толстые левые границы для 3x3 */
 .sudoku-row .battle-cell:first-child,
 .sudoku-row .battle-cell:nth-child(3n+1),
 .sudoku-row .opponent-cell:first-child,
 .sudoku-row .opponent-cell:nth-child(3n+1) {
   border-left: 2px solid #222;
-} */
+}
 
-/* Толстые правые границы для 3x3
+/* Толстые правые границы для 3x3 */
 .sudoku-row .battle-cell:nth-child(3n),
 .sudoku-row .opponent-cell:nth-child(3n) {
-  border-right: 2px solid #222;
-} */
+  border-right: 3px solid #222;
+}
 
 .battle-cell:focus {
   outline: none;
