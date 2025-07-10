@@ -182,13 +182,18 @@
   gap: 20px;
   position: relative;
   z-index: 1;
+  padding: 0;
 }
 
 .boards-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 40px;
+  justify-content: center;
+  max-width: 1000px;
+  margin: 0 auto;
 }
+
 
 .board-section {
   background: rgba(255, 255, 255, 0.95);
