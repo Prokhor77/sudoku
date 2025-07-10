@@ -144,11 +144,12 @@ function Sudoku({ user, onBackToMenu }) {
               puzzle: data.puzzle,
               solution: data.solution || prev.solution // Используем серверное решение если есть
             }));
+            // Подсчитываем заполненные ячейки в новой головоломке
+            setCompletedCells(countFilledCells(data.puzzle));
           }
           
           setPlayers(data.players);
           setGameStartTime(Date.now());
-          setCompletedCells(0);
           setGameCompleted(false);
           break;
           
@@ -198,7 +199,7 @@ function Sudoku({ user, onBackToMenu }) {
           // Обновляем судоку при получении нового от сервера
           setBoard(data.board);
           setGame(prev => ({ ...prev, puzzle: data.puzzle }));
-          setCompletedCells(0);
+          setCompletedCells(countFilledCells(data.puzzle));
           setGameCompleted(false);
           setGameStartTime(data.startTime || Date.now());
           setGameTime(0);
@@ -214,7 +215,7 @@ function Sudoku({ user, onBackToMenu }) {
       setIsMultiplayer(false);
       setPlayers([]);
       setGameStartTime(null);
-      setCompletedCells(0);
+      setCompletedCells(countFilledCells(board));
       setGameCompleted(false);
     };
     
@@ -232,7 +233,7 @@ function Sudoku({ user, onBackToMenu }) {
     setIsMultiplayer(false);
     setPlayers([]);
     setGameStartTime(null);
-    setCompletedCells(0);
+    setCompletedCells(countFilledCells(board));
     setGameCompleted(false);
   };
 
