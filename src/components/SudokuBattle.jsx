@@ -956,14 +956,30 @@ function SudokuBattle({ user, onBackToMenu }) {
                       )}
                     </div>
                   )}
-                  {row.map((cell, j) => (
-                    <div
-                      className={`opponent-cell ${game.puzzle[i][j] !== "" ? "initial" : ""} ${isTargetMode && ((targetType === 'row' && hoveredRow === i) || (targetType === 'col' && hoveredCol === j)) ? (targetType === 'row' ? "row-target-preview" : "col-target-preview") : ""} ${explodingCells.has(`opponent-${i}-${j}`) ? "cell-explosion" : ""}`}
-                      key={j}
-                    >
-                      {cell}
-                    </div>
-                  ))}
+                  {row.map((cell, j) => {
+                    // Определяем, что показывать в ячейке противника
+                    let cellContent = "";
+                    let additionalClass = "";
+                    
+                    // Если это изначально заполненная ячейка, показываем цифру
+                    if (game.puzzle[i][j] !== "") {
+                      cellContent = cell;
+                    }
+                    // Если ячейка заполнена игроком (не пустая), показываем зеленую клетку
+                    else if (cell !== "") {
+                      cellContent = "";
+                      additionalClass = "opponent-filled";
+                    }
+                    
+                    return (
+                      <div
+                        className={`opponent-cell ${game.puzzle[i][j] !== "" ? "initial" : ""} ${additionalClass} ${isTargetMode && ((targetType === 'row' && hoveredRow === i) || (targetType === 'col' && hoveredCol === j)) ? (targetType === 'row' ? "row-target-preview" : "col-target-preview") : ""} ${explodingCells.has(`opponent-${i}-${j}`) ? "cell-explosion" : ""}`}
+                        key={j}
+                      >
+                        {cellContent}
+                      </div>
+                    );
+                  })}
                   {/* Правая панель для выбора строки */}
                   {isTargetMode && (
                     <div

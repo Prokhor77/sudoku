@@ -187,6 +187,39 @@
   font-weight: bold;
 }
 
+.opponent-cell.opponent-filled {
+  background: #28a745;
+  color: white;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.opponent-cell.opponent-filled::before {
+  content: "✓";
+  font-size: 1.5rem;
+  font-weight: bold;
+  animation: greenCellPulse 2s ease-in-out infinite;
+}
+
+@keyframes greenCellPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.opponent-cell.opponent-filled:hover {
+  background: #218838;
+  transform: scale(1.05);
+  transition: all 0.2s ease;
+}
+
 /* Тонкие границы */
 .sudoku-board .battle-cell, .sudoku-board .opponent-cell {
   border-top: 0.5px solid #bbb;
