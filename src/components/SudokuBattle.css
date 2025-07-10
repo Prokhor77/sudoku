@@ -217,7 +217,7 @@
   background: #333;
   padding: 3px;
   border-radius: 8px;
-  max-width: 450px;
+  max-width: 550px;
   border: 3px solid #222;
 }
 
@@ -226,10 +226,10 @@
 }
 
 .battle-cell, .opponent-cell {
-  width: 35px;
-  height: 35px;
+  width: 45px;
+  height: 45px;
   text-align: center;
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: bold;
   background: #f5f5f5;
   color: #333;
