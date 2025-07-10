@@ -861,6 +861,12 @@
   transform: translateY(-1px);
 }
 
+.cell-highlight {
+  background: #ffe066 !important;
+  box-shadow: 0 0 6px 2px #ffe06655;
+  z-index: 2;
+}
+
 @media (max-width: 768px) {
   .boards-container {
     grid-template-columns: 1fr;

@@ -86,6 +86,7 @@ function SudokuBattle({ user, onBackToMenu }) {
   const [hoveredRow, setHoveredRow] = useState(null);
   const [hoveredCol, setHoveredCol] = useState(null);
   const [targetType, setTargetType] = useState(null); // 'row' или 'col'
+  const [hoveredNumber, setHoveredNumber] = useState(null);
   
   const wsRef = useRef(null);
   const playerIdRef = useRef(null);
@@ -782,6 +783,9 @@ function SudokuBattle({ user, onBackToMenu }) {
     // Проверяем, является ли поле изначально заполненным
     if (game.puzzle[row][col] !== "") {
       className += " locked";
+      if (hoveredNumber && String(game.puzzle[row][col]) === String(hoveredNumber)) {
+        className += " cell-highlight";
+      }
     }
     
     if (isCellCorrect(row, col)) {
@@ -903,7 +907,14 @@ function SudokuBattle({ user, onBackToMenu }) {
                       value={cell}
                       onChange={(e) => handleChange(i, j, e.target.value)}
                       maxLength={1}
-                      disabled={game.puzzle[i][j] !== "" || gameCompleted || isCellCorrect(i, j)}
+                      readOnly={game.puzzle[i][j] !== "" || isCellCorrect(i, j)}
+                      disabled={gameCompleted}
+                      onMouseEnter={() => {
+                        if (game.puzzle[i][j] !== "") {
+                          setHoveredNumber(game.puzzle[i][j]);
+                        }
+                      }}
+                      onMouseLeave={() => setHoveredNumber(null)}
                     />
                   ))}
                 </div>

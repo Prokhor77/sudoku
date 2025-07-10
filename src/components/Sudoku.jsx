@@ -60,15 +60,21 @@ function uniquePlayers(players) {
   });
 }
 
+// Подсчёт заполненных клеток на старте
+const countFilledCells = (board) => board.flat().filter(cell => cell !== "").length;
+
 function Sudoku({ user, onBackToMenu }) {
   const [game, setGame] = useState(initialGame);
   const [board, setBoard] = useState(game.puzzle);
   const [isMultiplayer, setIsMultiplayer] = useState(false);
   const [players, setPlayers] = useState([]);
   const [gameStartTime, setGameStartTime] = useState(null);
-  const [completedCells, setCompletedCells] = useState(0);
+  // completedCells теперь равен количеству заполненных клеток на старте
+  const [completedCells, setCompletedCells] = useState(countFilledCells(game.puzzle));
   const [gameCompleted, setGameCompleted] = useState(false);
   const [gameTime, setGameTime] = useState(0);
+  const [hoveredNumber, setHoveredNumber] = useState(null);
+  const [lockedCells, setLockedCells] = useState(new Set());
   
   const wsRef = useRef(null);
   const playerIdRef = useRef(null);
@@ -197,6 +203,9 @@ function Sudoku({ user, onBackToMenu }) {
           setGameStartTime(data.startTime || Date.now());
           setGameTime(0);
           break;
+        default:
+          // Неизвестный тип сообщения — ничего не делаем
+          break;
       }
     };
     
@@ -228,6 +237,10 @@ function Sudoku({ user, onBackToMenu }) {
   };
 
   const handleChange = (row, col, value) => {
+    // Только если клетка не изначальная и не заблокирована
+    if (game.puzzle[row][col] !== "" || lockedCells.has(`${row}-${col}`)) {
+      return;
+    }
     if (value === "" || (/^[1-9]$/.test(value) && value.length === 1)) {
       const newBoard = board.map((r, i) =>
         r.map((cell, j) => (i === row && j === col ? value : cell))
@@ -237,11 +250,11 @@ function Sudoku({ user, onBackToMenu }) {
       // Проверяем правильность
       const isCorrect = value === game.solution[row][col].toString();
       if (isCorrect && value !== "") {
-        const newCompletedCells = completedCells + 1;
-        setCompletedCells(newCompletedCells);
+        setCompletedCells(prev => prev + 1);
+        setLockedCells(prev => new Set(prev).add(`${row}-${col}`));
         
         // Проверяем завершение игры
-        if (newCompletedCells >= 81) {
+        if (completedCells + 1 >= 81) {
           setGameCompleted(true);
           if (wsRef.current) {
             wsRef.current.send(JSON.stringify({
@@ -279,6 +292,7 @@ function Sudoku({ user, onBackToMenu }) {
       setCompletedCells(0);
       setGameCompleted(false);
       setGameTime(0);
+      setLockedCells(new Set());
       
       if (wsRef.current) {
         wsRef.current.send(JSON.stringify({
@@ -296,6 +310,7 @@ function Sudoku({ user, onBackToMenu }) {
     setCompletedCells(0);
     setGameCompleted(false);
     setGameTime(0);
+    setLockedCells(new Set());
   };
 
   // Форматирование времени
@@ -318,6 +333,11 @@ function Sudoku({ user, onBackToMenu }) {
   // Получаем класс для ячейки
   const getCellClassName = (row, col) => {
     let className = "sudoku-cell";
+    if (game.puzzle[row][col] !== "") {
+      if (hoveredNumber && String(game.puzzle[row][col]) === String(hoveredNumber)) {
+        className += " cell-highlight";
+      }
+    }
     if (isCellCorrect(row, col)) {
       className += " correct";
     }
@@ -390,7 +410,10 @@ function Sudoku({ user, onBackToMenu }) {
                   value={cell}
                   onChange={(e) => handleChange(i, j, e.target.value)}
                   maxLength={1}
-                  disabled={game.puzzle[i][j] !== "" || gameCompleted}
+                  readOnly={game.puzzle[i][j] !== "" || lockedCells.has(`${i}-${j}`)}
+                  disabled={gameCompleted}
+                  onMouseEnter={() => { if (game.puzzle[i][j] !== "") setHoveredNumber(game.puzzle[i][j]); }}
+                  onMouseLeave={() => setHoveredNumber(null)}
                 />
               ))}
             </div>
