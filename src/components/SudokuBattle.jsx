@@ -215,9 +215,16 @@ function SudokuBattle({ user, onBackToMenu }) {
           break;
           
         case 'game_over':
+          console.log('GAME OVER! winner:', data.winner, 'my username:', user.username);
           setGameCompleted(true);
           setWinner(data.winner);
           setGameTime(data.gameTime || 0);
+          // Если мы не победитель, значит мы проиграли
+          if (data.winner !== user.username) {
+            console.log('Мы проиграли!');
+          } else {
+            console.log('Мы победили!');
+          }
           break;
           
         default:
@@ -343,7 +350,21 @@ function SudokuBattle({ user, onBackToMenu }) {
 
       // Проверка полной победы
       if (isBoardFullySolved(newBoard, game.solution) && !gameCompleted) {
+        console.log('Доска полностью совпадает с решением! Победа!');
+        
+        // Подсчитываем количество правильных ячеек
+        let correctCells = 0;
+        for (let i = 0; i < 9; i++) {
+          for (let j = 0; j < 9; j++) {
+            if (newBoard[i][j] !== "" && newBoard[i][j] === game.solution[i][j].toString()) {
+              correctCells++;
+            }
+          }
+        }
+        console.log(`Правильно заполнено ячеек: ${correctCells}/81`);
+        
         setGameCompleted(true);
+        setWinner(user.username);
         if (isConnected && wsRef.current) {
           wsRef.current.send(JSON.stringify({
             type: 'battle_victory',
@@ -794,6 +815,7 @@ function SudokuBattle({ user, onBackToMenu }) {
     ) {
       console.log('Победа! Отправляем battle_victory');
       setGameCompleted(true);
+      setWinner(user.username); // Устанавливаем себя как победителя
       if (wsRef.current) {
         wsRef.current.send(JSON.stringify({
           type: 'battle_victory',
@@ -842,6 +864,11 @@ function SudokuBattle({ user, onBackToMenu }) {
           <h2>{winner === user.username ? "🎉 Победа!" : "😔 Поражение!"}</h2>
           <p>Время: {formatTime(gameTime)}</p>
           <p>Победитель: {winner}</p>
+          {winner !== user.username && (
+            <p style={{ color: 'red', fontWeight: 'bold' }}>
+              Проигрыш! Исправь ошибки на доске!
+            </p>
+          )}
           <p>Возврат в меню через 5 секунд...</p>
         </div>
       )}

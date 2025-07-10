@@ -1,13 +1,145 @@
 {
-  "results": [],
+  "results": [
+    {
+      "id": "17520600816670v2zelb5e",
+      "username": "anya",
+      "gameTime": 105567,
+      "gameMode": "battle",
+      "date": "2025-07-09T11:21:21.667Z",
+      "completedCells": 81,
+      "difficulty": "medium",
+      "hintsUsed": 0,
+      "mistakes": 0,
+      "multiplayer": true,
+      "playersInGame": 2,
+      "gameId": null,
+      "type": "battle_victory",
+      "winner": "anya",
+      "opponent": "julia",
+      "result": "win"
+    },
+    {
+      "id": "1752060081671nbcyze2ke",
+      "username": "julia",
+      "gameTime": 105567,
+      "gameMode": "battle",
+      "date": "2025-07-09T11:21:21.671Z",
+      "completedCells": 81,
+      "difficulty": "medium",
+      "hintsUsed": 0,
+      "mistakes": 0,
+      "multiplayer": true,
+      "playersInGame": 2,
+      "gameId": null,
+      "type": "battle_victory",
+      "winner": "anya",
+      "opponent": "anya",
+      "result": "lose"
+    },
+    {
+      "id": "1752060683924tpaoditp9",
+      "username": "julia",
+      "gameTime": 99076,
+      "gameMode": "battle",
+      "date": "2025-07-09T11:31:23.924Z",
+      "completedCells": 81,
+      "difficulty": "medium",
+      "hintsUsed": 0,
+      "mistakes": 0,
+      "multiplayer": true,
+      "playersInGame": 2,
+      "gameId": null,
+      "type": "battle_victory",
+      "winner": "anya",
+      "opponent": "anya",
+      "result": "lose"
+    },
+    {
+      "id": "1752061802199888c4aq6o",
+      "username": "julia",
+      "gameTime": 140599,
+      "gameMode": "battle",
+      "date": "2025-07-09T11:50:02.199Z",
+      "completedCells": 81,
+      "difficulty": "medium",
+      "hintsUsed": 0,
+      "mistakes": 0,
+      "multiplayer": true,
+      "playersInGame": 2,
+      "gameId": null,
+      "type": "battle_victory",
+      "winner": "julia",
+      "opponent": "anya",
+      "result": "win"
+    },
+    {
+      "id": "1752061802203g9haypr7p",
+      "username": "anya",
+      "gameTime": 140599,
+      "gameMode": "battle",
+      "date": "2025-07-09T11:50:02.203Z",
+      "completedCells": 81,
+      "difficulty": "medium",
+      "hintsUsed": 0,
+      "mistakes": 0,
+      "multiplayer": true,
+      "playersInGame": 2,
+      "gameId": null,
+      "type": "battle_victory",
+      "winner": "julia",
+      "opponent": "julia",
+      "result": "lose"
+    },
+    {
+      "id": "mcx2vhofsp6pyx4r9",
+      "username": "anya",
+      "gameTime": 94085,
+      "gameMode": "battle",
+      "date": "2025-07-10T07:40:10.431Z",
+      "completedCells": 81,
+      "type": "battle_victory",
+      "difficulty": "medium",
+      "hintsUsed": 0,
+      "mistakes": 0,
+      "multiplayer": true,
+      "playersInGame": 2,
+      "winner": "anya",
+      "opponent": "julia",
+      "result": "win"
+    },
+    {
+      "id": "mcx2vhokd2hgetft6",
+      "username": "julia",
+      "gameTime": 94085,
+      "gameMode": "battle",
+      "date": "2025-07-10T07:40:10.436Z",
+      "completedCells": 81,
+      "type": "battle_victory",
+      "difficulty": "medium",
+      "hintsUsed": 0,
+      "mistakes": 0,
+      "multiplayer": true,
+      "playersInGame": 2,
+      "winner": "anya",
+      "opponent": "anya",
+      "result": "lose"
+    }
+  ],
   "statistics": {
-    "totalGames": 0,
-    "averageGameTime": 0,
-    "fastestGame": null,
-    "mostActivePlayer": null,
+    "totalGames": 7,
+    "averageGameTime": 111368,
+    "fastestGame": {
+      "username": "anya",
+      "gameTime": 94085,
+      "date": "2025-07-10T07:40:10.431Z"
+    },
+    "mostActivePlayer": {
+      "username": "julia",
+      "gamesPlayed": 4
+    },
     "gamesByMode": {
       "classic": 0,
-      "battle": 0
+      "battle": 7
     }
   }
-} 
+}

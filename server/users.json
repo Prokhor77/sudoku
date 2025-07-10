@@ -2,14 +2,14 @@
   "anya": {
     "password": "anya123",
     "createdAt": "2025-07-06T16:29:04.464Z",
-    "gamesPlayed": 0,
-    "bestTime": null
+    "gamesPlayed": 4,
+    "bestTime": 94085
   },
   "julia": {
     "password": "julia123",
     "createdAt": "2025-07-06T16:30:19.327Z",
-    "gamesPlayed": 0,
-    "bestTime": null
+    "gamesPlayed": 5,
+    "bestTime": 94085
   },
   "admin": {
     "password": "admin",

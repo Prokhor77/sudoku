@@ -61,6 +61,8 @@ function saveGameResults(results) {
   }
 }
 
+
+
 // Сохраняем результат игры
 function saveGameResult(result) {
   const gameResults = loadGameResults();
@@ -543,12 +545,17 @@ wss.on('connection', (ws) => {
     battleGame.puzzles.set(userId, battleGame.sharedPuzzle);
     battleGame.solutions.set(userId, battleGame.sharedSolution);
     
+    // Подсчитываем количество изначально заполненных ячеек
+    const initialFilledCells = battleGame.sharedPuzzle.reduce((count, row) => {
+      return count + row.filter(cell => cell !== "").length;
+    }, 0);
+    
     battleGame.players.set(userId, {
       id: userId,
       username: username,
       ws: ws,
       joinTime: Date.now(),
-      completedCells: 0,
+      completedCells: initialFilledCells, // Учитываем изначально заполненные ячейки
       bombs: 0,
       completedRows: new Set(),
       completedSquares: new Set()
@@ -585,8 +592,13 @@ wss.on('connection', (ws) => {
         battleGame.puzzles.set(player.id, newSharedSudoku);
         battleGame.solutions.set(player.id, newSharedSolution);
         
+        // Подсчитываем количество изначально заполненных ячеек в новой игре
+        const initialFilledCells = newSharedSudoku.reduce((count, row) => {
+          return count + row.filter(cell => cell !== "").length;
+        }, 0);
+        
         // Сбрасываем прогресс игрока
-        player.completedCells = 0;
+        player.completedCells = initialFilledCells; // Учитываем изначально заполненные ячейки
         player.bombs = 0;
         // НЕ сбрасываем completedRows и completedSquares, чтобы можно было получать бомбочки за повторное завершение
         
@@ -744,10 +756,15 @@ wss.on('connection', (ws) => {
     
     // Проверяем правильность ответа
     const playerSolution = battleGame.solutions.get(user.userId);
+    const playerPuzzle = battleGame.puzzles.get(user.userId);
     const isCorrect = value === playerSolution[row][col].toString();
     
-    if (isCorrect && value !== "") {
+    // Если это изначально заполненная ячейка, не считаем её
+    const isInitialCell = playerPuzzle[row][col] !== "";
+    
+    if (isCorrect && value !== "" && !isInitialCell) {
       player.completedCells += 1;
+      console.log(`[BATTLE] Игрок ${user.username} правильно заполнил ячейку. Всего правильных: ${player.completedCells}/81`);
     }
     
     // Если завершена строка или квадрат И значение правильное, даем бомбочку
@@ -786,9 +803,9 @@ wss.on('connection', (ws) => {
     
     // Проверяем, завершил ли игрок игру
     if (player.completedCells >= 81) {
-      // Игрок победил - сохраняем результат
+      // Игрок победил - используем handleBattleVictory для правильной обработки
       const gameTime = Date.now() - battleGame.startTime;
-      handleGameCompleted(user, gameTime, 'battle', {
+      handleBattleVictory(battleGameId, user, gameTime, {
         difficulty: 'medium',
         hintsUsed: 0,
         mistakes: 0,
@@ -799,20 +816,6 @@ wss.on('connection', (ws) => {
         opponent: opponent ? opponent.username : null,
         bombsUsed: player.bombs
       });
-      
-      // Отправляем сообщение о завершении игры
-      if (opponent && opponent.ws.readyState === WebSocket.OPEN) {
-        opponent.ws.send(JSON.stringify({
-          type: 'game_over',
-          winner: user.username,
-          gameTime: gameTime
-        }));
-      }
-      ws.send(JSON.stringify({
-        type: 'game_over',
-        winner: user.username,
-        gameTime: gameTime
-      }));
     }
   }
 
@@ -931,38 +934,6 @@ wss.on('connection', (ws) => {
     });
   }
   
-  function handleGameCompleted(user, gameTime, gameMode = 'classic', additionalData = {}) {
-    if (user && user.username) {
-      updateUserStats(user.username, gameTime);
-      
-      // Сохраняем расширенный результат игры
-      const gameResult = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        username: user.username,
-        gameTime: gameTime,
-        gameMode: gameMode,
-        date: new Date().toISOString(),
-        completedCells: 81,
-        difficulty: additionalData.difficulty || 'medium',
-        hintsUsed: additionalData.hintsUsed || 0,
-        mistakes: additionalData.mistakes || 0,
-        multiplayer: additionalData.multiplayer || false,
-        playersInGame: additionalData.playersInGame || 1,
-        gameId: additionalData.gameId || null,
-        ...additionalData
-      };
-      
-      saveGameResult(gameResult);
-      
-      broadcastToGame(currentGame, {
-        type: 'player_completed',
-        playerId: user.userId,
-        username: user.username,
-        gameTime: gameTime,
-        gameResult: gameResult
-      });
-    }
-  }
   
   function handlePlayerDisconnect(gameId, user) {
     if (!gameId || !user) return;
@@ -1078,27 +1049,52 @@ function generateSudokuSolution() {
   ];
 }
 
+function handleGameCompleted(user, gameTime, gameMode = 'classic', additionalData = {}) {
+  if (!user) return;
+  
+  const result = {
+    id: Date.now().toString(36) + Math.random().toString(36).substr(2, 9),
+    username: user.username,
+    gameTime: gameTime,
+    gameMode: gameMode,
+    date: new Date().toISOString(),
+    completedCells: 81,
+    ...additionalData
+  };
+  
+  console.log('Сохраняем результат игры:', result);
+  saveGameResult(result);
+  updateUserStats(user.username, gameTime);
+}
+
 function handleBattleVictory(battleGameId, winnerUser, gameTime, data) {
   const battleGame = battleGames.get(battleGameId);
-  if (!battleGame) return;
+  if (!battleGame) {
+    console.log('[BATTLE] Игра не найдена для battleGameId:', battleGameId);
+    return;
+  }
 
   // Если уже есть победитель, не засчитываем вторую победу
   if (battleGame._winnerUsername) {
     // Этот игрок проиграл
     const loser = winnerUser;
     const winner = Array.from(battleGame.players.values()).find(p => p.username === battleGame._winnerUsername);
+    console.log('[BATTLE] Уже есть победитель:', winner.username, '| Проигравший:', loser.username);
     handleGameCompleted(loser, gameTime, 'battle', {
       ...data,
       winner: winner.username,
       opponent: winner.username,
       result: 'lose'
     });
-    if (loser.ws.readyState === WebSocket.OPEN) {
+    if (loser.ws && loser.ws.readyState === WebSocket.OPEN) {
       loser.ws.send(JSON.stringify({
         type: 'game_over',
         winner: winner.username,
         gameTime: gameTime
       }));
+      console.log('[BATTLE] Отправлено game_over проигравшему:', loser.username);
+    } else {
+      console.log('[BATTLE] Не удалось отправить game_over проигравшему:', loser.username, '| ws:', !!loser.ws);
     }
     return;
   }
@@ -1107,6 +1103,7 @@ function handleBattleVictory(battleGameId, winnerUser, gameTime, data) {
   battleGame._winnerUsername = winnerUser.username;
   const winner = winnerUser;
   const loser = Array.from(battleGame.players.values()).find(p => p.id !== winnerUser.userId);
+  console.log('[BATTLE] Победитель:', winner.username, '| Проигравший:', loser ? loser.username : 'нет');
 
   // Сохраняем результат для победителя
   handleGameCompleted(winner, gameTime, 'battle', {
@@ -1127,20 +1124,37 @@ function handleBattleVictory(battleGameId, winnerUser, gameTime, data) {
   }
 
   // Оповещаем обоих игроков
-  if (winner.ws.readyState === WebSocket.OPEN) {
+  if (winner.ws && winner.ws.readyState === WebSocket.OPEN) {
     winner.ws.send(JSON.stringify({
       type: 'game_over',
       winner: winner.username,
       gameTime: gameTime
     }));
+    console.log('[BATTLE] Отправлено game_over победителю:', winner.username);
+  } else {
+    console.log('[BATTLE] Не удалось отправить game_over победителю:', winner.username, '| ws:', !!winner.ws);
   }
-  if (loser && loser.ws.readyState === WebSocket.OPEN) {
+  if (loser && loser.ws && loser.ws.readyState === WebSocket.OPEN) {
     loser.ws.send(JSON.stringify({
       type: 'game_over',
       winner: winner.username,
       gameTime: gameTime
     }));
+    console.log('[BATTLE] Отправлено game_over проигравшему:', loser.username);
+  } else if (loser) {
+    console.log('[BATTLE] Не удалось отправить game_over проигравшему:', loser.username, '| ws:', !!loser.ws);
   }
+  
+  // Отправляем сообщение о завершении игры всем игрокам в игре
+  battleGame.players.forEach(player => {
+    if (player.ws && player.ws.readyState === WebSocket.OPEN) {
+      player.ws.send(JSON.stringify({
+        type: 'game_over',
+        winner: winner.username,
+        gameTime: gameTime
+      }));
+    }
+  });
 }
 
 const PORT = process.env.PORT || 3001;
