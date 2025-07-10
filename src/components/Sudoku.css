@@ -61,13 +61,14 @@
 .game-time {
   font-size: 16px;
   font-weight: bold;
-  color: white;
-  background-color: rgba(255, 255, 255, 0.2);
+  color: #333;
+  background-color: white;
   backdrop-filter: blur(10px);
   padding: 6px 14px;
   border-radius: 20px;
   display: inline-block;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .progress-info {

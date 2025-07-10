@@ -289,7 +289,7 @@ function Sudoku({ user, onBackToMenu }) {
       const newGame = generateSudoku();
       setGame(newGame);
       setBoard(newGame.puzzle);
-      setCompletedCells(0);
+      setCompletedCells(countFilledCells(newGame.puzzle));
       setGameCompleted(false);
       setGameTime(0);
       setLockedCells(new Set());
@@ -307,7 +307,7 @@ function Sudoku({ user, onBackToMenu }) {
     const newGame = generateSudoku();
     setGame(newGame);
     setBoard(newGame.puzzle);
-    setCompletedCells(0);
+    setCompletedCells(countFilledCells(newGame.puzzle));
     setGameCompleted(false);
     setGameTime(0);
     setLockedCells(new Set());
