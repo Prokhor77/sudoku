@@ -432,17 +432,6 @@ function Sudoku({ user, onBackToMenu }) {
                     {formatTime(Date.now() - player.joinTime)}
                   </span>
                 </div>
-                <div className="player-progress">
-                  <span className="completed-cells">
-                    {player.completedCells}/81
-                  </span>
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill" 
-                      style={{width: `${(player.completedCells / 81) * 100}%`}}
-                    ></div>
-                  </div>
-                </div>
               </div>
             ))}
           </div>

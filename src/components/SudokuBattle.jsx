@@ -895,6 +895,28 @@ function SudokuBattle({ user, onBackToMenu }) {
 
       <div className="battle-content">
         <div className="boards-container">
+          {myBombs > 0 && (
+            <div className="bomb-controls">
+              <h3>Использовать бомбочку:</h3>
+              <button 
+                className={`bomb-btn linear ${myBombs > 0 ? 'ready' : ''}`}
+                onClick={() => showBombEffect('linear')}
+                disabled={showBombSelection}
+              >
+                💥 Линейная (удалить строку)
+                {myBombs > 0 && <span className="bomb-effect-indicator">{myBombs}</span>}
+              </button>
+              <button 
+                className={`bomb-btn random ${myBombs > 0 ? 'ready' : ''}`}
+                onClick={() => showBombEffect('random')}
+                disabled={showBombSelection}
+              >
+                🎲 Случайная (до 5 ячеек)
+                {myBombs > 0 && <span className="bomb-effect-indicator">{myBombs}</span>}
+              </button>
+            </div>
+          )}
+
           <div className="board-section">
             <h3>Ваша доска</h3>
             <div className="sudoku-board">
@@ -1034,28 +1056,6 @@ function SudokuBattle({ user, onBackToMenu }) {
             )}
           </div>
         </div>
-
-        {myBombs > 0 && (
-          <div className="bomb-controls">
-            <h3>Использовать бомбочку:</h3>
-            <button 
-              className={`bomb-btn linear ${myBombs > 0 ? 'ready' : ''}`}
-              onClick={() => showBombEffect('linear')}
-              disabled={showBombSelection}
-            >
-              💥 Линейная (удалить строку)
-              {myBombs > 0 && <span className="bomb-effect-indicator">{myBombs}</span>}
-            </button>
-            <button 
-              className={`bomb-btn random ${myBombs > 0 ? 'ready' : ''}`}
-              onClick={() => showBombEffect('random')}
-              disabled={showBombSelection}
-            >
-              🎲 Случайная (до 5 ячеек)
-              {myBombs > 0 && <span className="bomb-effect-indicator">{myBombs}</span>}
-            </button>
-          </div>
-        )}
 
         {showBombSelection && bombType === 'linear' && (
           <div className="bomb-selection">
