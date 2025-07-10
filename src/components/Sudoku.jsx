@@ -293,7 +293,9 @@ function Sudoku({ user, onBackToMenu }) {
       setCompletedCells(countFilledCells(newGame.puzzle));
       setGameCompleted(false);
       setGameTime(0);
+      setGameStartTime(Date.now());
       setLockedCells(new Set());
+      setHoveredNumber(null);
       
       if (wsRef.current) {
         wsRef.current.send(JSON.stringify({
@@ -311,7 +313,9 @@ function Sudoku({ user, onBackToMenu }) {
     setCompletedCells(countFilledCells(newGame.puzzle));
     setGameCompleted(false);
     setGameTime(0);
+    setGameStartTime(Date.now());
     setLockedCells(new Set());
+    setHoveredNumber(null);
   };
 
   // Форматирование времени

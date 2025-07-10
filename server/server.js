@@ -378,6 +378,10 @@ wss.on('connection', (ws) => {
         case 'new_game':
           handleNewGame(currentGame, data.board, data.puzzle);
           break;
+        case 'battle_new_game':
+          console.log(`[SERVER] Получено сообщение battle_new_game от ${currentUser?.username}:`, data);
+          handleBattleNewGame(currentBattleGame, currentUser, data.board, data.puzzle, data.solution);
+          break;
         case 'battle_victory':
           handleBattleVictory(currentBattleGame, currentUser, data.gameTime, data);
           break;
@@ -734,7 +738,7 @@ wss.on('connection', (ws) => {
 
   // Новая функция для обновления ячеек в боевом режиме
   function handleBattleCellUpdate(battleGameId, user, row, col, value, rowCompleted, squareCompleted) {
-    console.log(`Обрабатываем обновление ячейки: игрок ${user.username}, строка ${row}, колонка ${col}, значение ${value}, завершение строки: ${rowCompleted}, завершение квадрата: ${squareCompleted}`);
+    console.log(`[BATTLE CELL UPDATE] Обрабатываем обновление ячейки: игрок ${user.username}, строка ${row}, колонка ${col}, значение ${value}, завершение строки: ${rowCompleted}, завершение квадрата: ${squareCompleted}`);
     
     const battleGame = battleGames.get(battleGameId);
     if (!battleGame) {
@@ -769,7 +773,7 @@ wss.on('connection', (ws) => {
     
     // Если завершена строка или квадрат И значение правильное, даем бомбочку
     if ((rowCompleted || squareCompleted) && isCorrect && value !== "") {
-      console.log(`Игрок ${user.username} получил бомбочку за правильное завершение ${rowCompleted ? 'строки' : 'квадрата'}. Было: ${player.bombs}, стало: ${player.bombs + 1}`);
+      console.log(`[BATTLE BOMB] Игрок ${user.username} получил бомбочку за правильное завершение ${rowCompleted ? 'строки' : 'квадрата'}. Было: ${player.bombs}, стало: ${player.bombs + 1}`);
       player.bombs += 1;
       
       // Отправляем обновленное количество бомбочек игроку
@@ -1005,6 +1009,80 @@ wss.on('connection', (ws) => {
         board: board
       }));
     }
+  }
+
+  function handleBattleNewGame(battleGameId, user, newBoard, newPuzzle, newSolution) {
+    const battleGame = battleGames.get(battleGameId);
+    if (!battleGame) {
+      console.log(`[BATTLE] Игра не найдена для battleGameId: ${battleGameId}`);
+      return;
+    }
+    
+    console.log(`[BATTLE] Игрок ${user.username} запросил новую игру в игре ${battleGameId}`);
+    console.log(`[BATTLE] Количество игроков в игре: ${battleGame.players.size}`);
+    
+    // Обновляем общее судоку для всей игры
+    battleGame.sharedBoard = newBoard;
+    battleGame.sharedPuzzle = newPuzzle;
+    battleGame.sharedSolution = newSolution;
+    battleGame.startTime = Date.now();
+    
+    // Обновляем судоку для всех игроков в этой игре
+    battleGame.players.forEach(player => {
+      console.log(`[BATTLE] Обновляем игрока: ${player.username} (ID: ${player.id})`);
+      
+      battleGame.boards.set(player.id, newBoard);
+      battleGame.puzzles.set(player.id, newPuzzle);
+      battleGame.solutions.set(player.id, newSolution);
+      
+      // Подсчитываем количество изначально заполненных ячеек в новой игре
+      const initialFilledCells = newPuzzle.reduce((count, row) => {
+        return count + row.filter(cell => cell !== "").length;
+      }, 0);
+      
+      // Сбрасываем прогресс игрока
+      player.completedCells = initialFilledCells;
+      player.bombs = 0;
+      
+      // Отправляем новое судоку каждому игроку
+      if (player.ws.readyState === WebSocket.OPEN) {
+        console.log(`[BATTLE] Отправляем новую игру игроку ${player.username}`);
+        
+        const newGameMessage = {
+          type: 'new_battle_game',
+          board: newBoard,
+          puzzle: newPuzzle,
+          solution: newSolution,
+          startTime: battleGame.startTime
+        };
+        
+        player.ws.send(JSON.stringify(newGameMessage));
+        console.log(`[BATTLE] Отправлено сообщение new_battle_game игроку ${player.username}:`, newGameMessage);
+        
+        // Отправляем обновление бомбочек
+        const myBombsMessage = {
+          type: 'my_bombs_update',
+          bombs: 0
+        };
+        player.ws.send(JSON.stringify(myBombsMessage));
+        console.log(`[BATTLE] Отправлено обновление бомбочек игроку ${player.username}:`, myBombsMessage);
+        
+        // Отправляем обновление бомбочек соперника
+        const opponent = Array.from(battleGame.players.values()).find(p => p.id !== player.id);
+        if (opponent) {
+          const opponentBombsMessage = {
+            type: 'opponent_bombs_update',
+            bombs: 0
+          };
+          player.ws.send(JSON.stringify(opponentBombsMessage));
+          console.log(`[BATTLE] Отправлено обновление бомбочек соперника игроку ${player.username}:`, opponentBombsMessage);
+        }
+      } else {
+        console.log(`[BATTLE] WebSocket игрока ${player.username} не готов (readyState: ${player.ws.readyState})`);
+      }
+    });
+    
+    console.log(`[BATTLE] Новая игра отправлена всем игрокам в игре ${battleGameId}`);
   }
 });
 

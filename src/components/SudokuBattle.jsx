@@ -198,6 +198,7 @@ function SudokuBattle({ user, onBackToMenu }) {
           
         case 'new_battle_game':
           console.log('Получили новую игру от сервера, сбрасываем бомбочки');
+          console.log('Данные новой игры:', data);
           // Получаем новое судоку от сервера
           setBoard(data.board);
           setOpponentBoard(data.board);
@@ -206,13 +207,23 @@ function SudokuBattle({ user, onBackToMenu }) {
             puzzle: data.puzzle,
             solution: data.solution
           }));
-          // НЕ сбрасываем completedRows и completedSquares, чтобы можно было получать бомбочки за повторное завершение
+          // Сбрасываем состояния завершения для новой игры
+          setCompletedRows(new Set());
+          setCompletedSquares(new Set());
           setMyBombs(0);
           setOpponentBombs(0);
           setGameCompleted(false);
           setWinner(null);
-          setGameStartTime(Date.now()); // Начинаем отсчет времени заново
+          setGameStartTime(data.startTime || Date.now()); // Используем время от сервера
           setGameTime(0);
+          setExplodingCells(new Set());
+          setExplosions([]);
+          setNumberExplosions([]);
+          setHoveredNumber(null);
+          setShowBombSelection(false);
+          setShowBombPreview(false);
+          setIsTargetMode(false);
+          console.log('Новая игра успешно применена');
           break;
           
         case 'game_over':
@@ -258,21 +269,33 @@ function SudokuBattle({ user, onBackToMenu }) {
 
   // Проверка завершения строки с переданной доской
   const checkRowCompletionWithBoard = (row, boardToCheck) => {
+    console.log(`[ROW CHECK] Проверяем завершение строки ${row}`);
+    console.log(`[ROW CHECK] Строка в доске:`, boardToCheck[row]);
+    console.log(`[ROW CHECK] Изначальные значения:`, game.puzzle[row]);
+    console.log(`[ROW CHECK] Решение:`, game.solution[row]);
+    
     // Проверяем, что строка заполнена и все значения правильные
     const isComplete = boardToCheck[row].every((cell, col) => {
       // Если это изначально заполненная ячейка, считаем её правильной
       if (game.puzzle[row][col] !== "") {
+        console.log(`[ROW CHECK] Ячейка [${row}][${col}] изначально заполнена: ${game.puzzle[row][col]}`);
         return true;
       }
       // Если ячейка пустая, строка не завершена
       if (cell === "") {
+        console.log(`[ROW CHECK] Ячейка [${row}][${col}] пустая`);
         return false;
       }
       // Проверяем правильность значения
-      return cell === game.solution[row][col].toString();
+      const isCorrect = cell === game.solution[row][col].toString();
+      console.log(`[ROW CHECK] Ячейка [${row}][${col}] = ${cell}, правильное = ${game.solution[row][col]}, корректно = ${isCorrect}`);
+      return isCorrect;
     });
     
+    console.log(`[ROW CHECK] Строка ${row} завершена: ${isComplete}`);
+    
     if (isComplete) {
+      console.log(`[ROW CHECK] Добавляем строку ${row} в completedRows`);
       setCompletedRows(prev => new Set([...prev, row]));
       return true;
     }
@@ -281,6 +304,8 @@ function SudokuBattle({ user, onBackToMenu }) {
 
   // Проверка завершения квадрата 3x3 с переданной доской
   const checkSquareCompletionWithBoard = (squareRow, squareCol, boardToCheck) => {
+    console.log(`[SQUARE CHECK] Проверяем завершение квадрата [${squareRow}][${squareCol}]`);
+    
     // Проверяем, что квадрат заполнен и все значения правильные
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
@@ -289,23 +314,29 @@ function SudokuBattle({ user, onBackToMenu }) {
         
         // Если это изначально заполненная ячейка, считаем её правильной
         if (game.puzzle[row][col] !== "") {
+          console.log(`[SQUARE CHECK] Ячейка [${row}][${col}] изначально заполнена: ${game.puzzle[row][col]}`);
           continue;
         }
         
         // Если ячейка пустая, квадрат не завершен
         if (boardToCheck[row][col] === "") {
+          console.log(`[SQUARE CHECK] Ячейка [${row}][${col}] пустая`);
           return false;
         }
         
         // Проверяем правильность значения
         if (boardToCheck[row][col] !== game.solution[row][col].toString()) {
+          console.log(`[SQUARE CHECK] Ячейка [${row}][${col}] = ${boardToCheck[row][col]}, правильное = ${game.solution[row][col]}`);
           return false;
         }
+        
+        console.log(`[SQUARE CHECK] Ячейка [${row}][${col}] = ${boardToCheck[row][col]} корректна`);
       }
     }
     
     // Если все ячейки правильные, квадрат завершен
     const squareKey = `${squareRow}-${squareCol}`;
+    console.log(`[SQUARE CHECK] Квадрат [${squareRow}][${squareCol}] завершен, добавляем в completedSquares`);
     setCompletedSquares(prev => new Set([...prev, squareKey]));
     return true;
   };
@@ -331,10 +362,14 @@ function SudokuBattle({ user, onBackToMenu }) {
       let squareCompleted = false;
       
       if (isCorrect && value !== "") {
+        console.log(`[HANDLE CHANGE] Проверяем завершение строки ${row} и квадрата для ячейки [${row}][${col}]`);
+        console.log(`[HANDLE CHANGE] Текущие completedRows:`, Array.from(completedRows));
+        console.log(`[HANDLE CHANGE] Текущие completedSquares:`, Array.from(completedSquares));
         rowCompleted = checkRowCompletionWithBoard(row, newBoard);
         const squareRow = Math.floor(row / 3);
         const squareCol = Math.floor(col / 3);
         squareCompleted = checkSquareCompletionWithBoard(squareRow, squareCol, newBoard);
+        console.log(`[HANDLE CHANGE] Результат: rowCompleted = ${rowCompleted}, squareCompleted = ${squareCompleted}`);
       }
       
       // Отправляем обновление на сервер
@@ -755,12 +790,36 @@ function SudokuBattle({ user, onBackToMenu }) {
     setGame(newGame);
     setBoard(newGame.puzzle);
     setOpponentBoard(newGame.puzzle);
-    // НЕ сбрасываем completedRows и completedSquares, чтобы можно было получать бомбочки за повторное завершение
+    // Сбрасываем состояния завершения для новой игры
+    setCompletedRows(new Set());
+    setCompletedSquares(new Set());
     setMyBombs(0);
     setOpponentBombs(0);
     setGameCompleted(false);
     setWinner(null);
     setGameTime(0);
+    setGameStartTime(Date.now());
+    setExplodingCells(new Set());
+    setExplosions([]);
+    setNumberExplosions([]);
+    setHoveredNumber(null);
+    setShowBombSelection(false);
+    setShowBombPreview(false);
+    setIsTargetMode(false);
+    
+    // Отправляем новую игру на сервер для синхронизации с противником
+    if (isConnected && wsRef.current) {
+      const newGameMessage = {
+        type: 'battle_new_game',
+        board: newGame.puzzle,
+        puzzle: newGame.puzzle,
+        solution: newGame.solution
+      };
+      console.log('Отправляем новую игру на сервер:', newGameMessage);
+      wsRef.current.send(JSON.stringify(newGameMessage));
+    } else {
+      console.log('Не отправляем новую игру: isConnected =', isConnected, 'wsRef.current =', !!wsRef.current);
+    }
   };
 
   const formatTime = (time) => {
