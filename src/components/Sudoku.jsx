@@ -102,7 +102,7 @@ function Sudoku({ user, onBackToMenu }) {
     if (gameCompleted) {
       const timer = setTimeout(() => {
         onBackToMenu();
-      }, 5000);
+      }, 10000);
       
       return () => clearTimeout(timer);
     }
@@ -377,10 +377,12 @@ function Sudoku({ user, onBackToMenu }) {
       </div>
       
       {gameCompleted && (
-        <div className="game-completed">
-          <h2>🎉 Поздравляем! Игра завершена!</h2>
-          <p>Время: {formatTime(gameTime)}</p>
-          <p>Возврат в меню через 5 секунд...</p>
+        <div className="game-completed-overlay">
+          <div className="game-completed">
+            <h2>🎉 Поздравляем! Игра завершена!</h2>
+            <p>Время: {formatTime(gameTime)}</p>
+            <p>Возврат в меню через 10 секунд...</p>
+          </div>
         </div>
       )}
       

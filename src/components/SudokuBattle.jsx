@@ -114,7 +114,7 @@ function SudokuBattle({ user, onBackToMenu }) {
     if (gameCompleted) {
       const timer = setTimeout(() => {
         onBackToMenu();
-      }, 5000);
+      }, 10000);
       
       return () => clearTimeout(timer);
     }
@@ -923,16 +923,18 @@ function SudokuBattle({ user, onBackToMenu }) {
       </div>
 
       {gameCompleted && (
-        <div className="game-completed">
-          <h2>{winner === user.username ? "🎉 Победа!" : "😔 Поражение!"}</h2>
-          <p>Время: {formatTime(gameTime)}</p>
-          <p>Победитель: {winner}</p>
-          {winner !== user.username && (
-            <p style={{ color: 'red', fontWeight: 'bold' }}>
-              Проигрыш! Исправь ошибки на доске!
-            </p>
-          )}
-          <p>Возврат в меню через 5 секунд...</p>
+        <div className="game-completed-overlay">
+          <div className="game-completed">
+            <h2>{winner === user.username ? "🎉 Победа!" : "😔 Поражение!"}</h2>
+            <p>Время: {formatTime(gameTime)}</p>
+            <p>Победитель: {winner}</p>
+            {winner !== user.username && (
+              <p style={{ color: 'red', fontWeight: 'bold' }}>
+                Проигрыш! Исправь ошибки на доске!
+              </p>
+            )}
+            <p>Возврат в меню через 10 секунд...</p>
+          </div>
         </div>
       )}
 
