@@ -2,9 +2,9 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 15px;
+  padding-bottom: 10px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  height: calc(100vh - 80px);
-  overflow: hidden;
+  min-height: 100vh;
   position: relative;
 }
 
@@ -147,6 +147,8 @@
 .games-table, .players-table, .users-table {
   overflow-x: auto;
   margin-top: 15px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 table {
@@ -172,6 +174,9 @@ th {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 td {
@@ -321,10 +326,27 @@ tr:hover {
 
 .recent-games, .top-players {
   margin-top: 20px;
+  margin-bottom: 10px;
 }
 
 .recent-games h3, .top-players h3 {
   color: #2c3e50;
   margin-bottom: 15px;
   font-size: 1.2rem;
+}
+
+.top-players .players-table {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.top-players table {
+  margin: 0;
+}
+
+.top-players thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(0, 123, 255, 0.1);
 } 

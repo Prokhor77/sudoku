@@ -305,8 +305,6 @@ function AdminPanel({ onBackToMenu }) {
                     <th>Режим</th>
                     <th>Время</th>
                     <th>Сложность</th>
-                    <th>Подсказки</th>
-                    <th>Ошибки</th>
                     <th>Мультиплеер</th>
                     <th>Дата</th>
                   </tr>
@@ -319,8 +317,6 @@ function AdminPanel({ onBackToMenu }) {
                       <td>{game.gameMode === 'classic' ? 'Классика' : 'Бой'}</td>
                       <td>{formatTime(game.gameTime)}</td>
                       <td>{game.difficulty || 'Средняя'}</td>
-                      <td>{game.hintsUsed || 0}</td>
-                      <td>{game.mistakes || 0}</td>
                       <td>{game.multiplayer ? 'Да' : 'Нет'}</td>
                       <td>{formatDate(game.date)}</td>
                     </tr>

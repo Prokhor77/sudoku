@@ -257,7 +257,7 @@ function Sudoku({ user, onBackToMenu }) {
         // Проверяем завершение игры
         if (completedCells + 1 >= 81) {
           setGameCompleted(true);
-          if (wsRef.current) {
+          if (wsRef.current && gameStartTime) {
             wsRef.current.send(JSON.stringify({
               type: 'game_completed',
               gameTime: Date.now() - gameStartTime,
@@ -380,7 +380,7 @@ function Sudoku({ user, onBackToMenu }) {
         <div className="game-completed-overlay">
           <div className="game-completed">
             <h2>🎉 Поздравляем! Игра завершена!</h2>
-            <p>Время: {formatTime(gameTime)}</p>
+            {gameStartTime && <p>Время: {formatTime(gameTime)}</p>}
             <p>Возврат в меню через 10 секунд...</p>
           </div>
         </div>
